@@ -3,24 +3,123 @@ title: "Bay Area Heat Mapping"
 format: html
 editor: visual
 ---
-
-## Quarto
-
-Quarto enables you to weave together content and executable code into a finished document. To learn more about Quarto see <https://quarto.org>.
-
-## Running Code
-
-When you click the **Render** button a document will be generated that includes both content and the output of embedded code. You can embed code like this:
-
 ```{r}
-1 + 1
+library(sf)
+library(tidyverse)
+library(osmdata)
 ```
 
-You can add options to executable code like this
 
 ```{r}
-#| echo: false
-2 * 2
+am = st_read("traverses_chw_palo_alto_california_090424/palo-alto-california_am_trav.shp")
 ```
 
-The `echo: false` option disables the printing of code (only output is displayed).
+```{r}
+ggplot() +
+geom_sf(data = am, aes(color = t_f)) +
+  scale_color_continuous(low="lightblue",high="red"
+                         )
+```
+
+```{r}
+borders = getbb("Palo Alto") %>% 
+  opq() %>% 
+  add_osm_feature(key = "boundary", value = "administrative") %>% 
+  osmdata_sf()
+
+palo_alto_border = borders$osm_multipolygons %>% 
+  filter(name == "Palo Alto")
+epa_border =  borders$osm_multipolygons %>% 
+  filter(name == "East Palo Alto")
+menlo_border =  borders$osm_multipolygons %>% 
+  filter(name == "Menlo Park")
+```
+
+```{r}
+str(palo_alto_border)
+str(sf_bay)
+```
+
+
+```{r}
+bays = getbb("California") %>% 
+  opq() %>% 
+  add_osm_feature(key = "natural", value = "bay") %>% 
+  osmdata_sf()
+sf_bay = bays$osm_multipolygons %>% filter(name == "San Francisco Bay")
+sf_marsh = bays$osm_multipolygons %>% 
+  filter(name == "San Francisco Bay (estuarial)")
+```
+
+```{r}
+ggplot() +
+  geom_sf(data = sf_bay)
+```
+```{r}
+palo_alto = st_difference(palo_alto_border, sf_bay)
+menlo_park = st_difference(menlo_border, sf_bay)
+epa = st_difference(epa_border, sf_bay)
+```
+
+
+
+```{r}
+ggplot() +
+  geom_sf(data = palo_alto_border, fill = "green", alpha = 0.1) +
+  geom_sf(data = epa_border, fill = "orange", alpha = 0.1) +
+  geom_sf(data = menlo_border, fill = "blue", alpha = 0.1)
+```
+```{r}
+ggplot() +
+  geom_sf(data = palo_alto, fill = "green", alpha = 0.1) +
+  geom_sf(data = epa, fill = "orange", alpha = 0.1) +
+  geom_sf(data = menlo_park, fill = "blue", alpha = 0.1)
+```
+
+```{r}
+# palo_alto
+# # xmin(-122.2027, -122.1563, -122.2284)
+# epa
+# menlo_park
+xmin = -122.2284
+ymin = 37.28768
+xmax = -122.0862
+ymax = 37.50792
+```
+
+```{r}
+get_temperature = function(x, y) {
+  # if there's data in this pixel, then average the data her (weighted)
+  # if not, set this as "NA" for now
+  return(1)
+}
+```
+
+```{r}
+granularity = 3
+x = seq(xmin, xmax, length.out = (granularity + 1))
+y = seq(ymin, ymax, length.out = (granularity + 1))
+expand.grid(x = x,y = y) %>% 
+  group_by(y) %>% 
+  mutate(
+    xmin = lag(x),
+    xmax = x)
+# ,
+#     ymin = lag(y),
+#     ymax = y,
+#     temperature = get_temperature(x,y)) %>%
+#   drop_na()
+```
+
+```{r}
+ggplot() +
+  geom_sf(data = map$osm_points) +
+geom_sf(data = am, aes(color = t_f)) +
+  scale_color_continuous(low="lightblue",high="red")
+```
+
+```{r}
+expand.grid()
+```
+
+
