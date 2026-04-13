@@ -1,0 +1,54 @@
+---
+title: "baylands data"
+format: html
+editor: visual
+---
+
+## Quarto
+
+Quarto enables you to weave together content and executable code into a finished document. To learn more about Quarto see <https://quarto.org>.
+
+## Running Code
+
+When you click the **Render** button a document will be generated that includes both content and the output of embedded code. You can embed code like this:
+
+```{r}
+1 + 1
+```
+
+You can add options to executable code like this
+
+```{r}
+#| echo: false
+2 * 2
+```
+
+The `echo: false` option disables the printing of code (only output is displayed).
+```{r}
+library(sf)
+library(tidyverse)
+library(osmdata)
+library(tidyverse)
+library(googlesheets4)
+library(janitor)
+library(ggthemes)
+```
+
+```{r}
+water_data.csv = data.frame(
+  Sample,Latitude,Longitude,Free Chlorine (ppm),Nitrate NO3- (ppm),Nitrite NO2-(ppm),General Hardness(ppm),Total Alkalinity(ppm),pH,Sodium Chloride NaCl(ppm),Ammonia NitrogenH6N2(ppm)
+Sample 1,37.435429,-122.106671,0,0–15,0–0.5,435,180–240,>8.4,0,0–0.25
+Sample 2,37.436344,-122.105193,0,250,1–5,425,>240,>8.4,0,0.5
+Sample 3a,37.440336,-122.112990,0,50,0,425,>240,>8.4,0,0
+Sample 3b,,,0,150,2,425,240,>8.4,0,0–0.5
+Sample 3c,,,0,25,0,425,180,>8.4,0,0–0.5
+Tap Water (Control),,,0,25–50,1,125–250,240,>8.4,0–2000,0
+)
+```
+
+
+
+```{r}
+read_sheet("https://docs.google.com/spreadsheets/d/1NCE0y1CySTw83xqdO-bYBNrs1ew5zJLd5kafm3FWWPI/edit?usp=sharing") %>% 
+  clean_names()
+```

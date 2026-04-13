@@ -1,0 +1,481 @@
+---
+title: "Bay Area Heat Mapping"
+format: html
+editor: visual
+---
+```{r}
+library(sf)
+library(tidyverse)
+library(osmdata)
+# install.packages("dplyr")
+# library(dplyr)
+# install.packages("akima")
+library(akima)
+#install.packages("raster")
+library(raster)
+library(janitor)
+```
+
+
+```{r}
+am = st_read("traverses_chw_palo_alto_california_090424/palo-alto-california_am_trav.shp")
+```
+
+```{r}
+ggplot() +
+geom_sf(data = am, aes(color = t_f)) +
+  scale_color_continuous(low="lightblue",high="red"
+                         ) 
++ labs(colour = "Morning Temperature")
+```
+
+
+
+
+```{r}
+# borders = getbb("Palo Alto") %>% 
+#   opq() %>% 
+#   add_osm_feature(key = "boundary", value = "administrative") %>% 
+#   osmdata_sf()
+# 
+# palo_alto_border = borders$osm_multipolygons %>% 
+#   filter(name == "Palo Alto")
+# epa_border =  borders$osm_multipolygons %>% 
+#   filter(name == "East Palo Alto")
+# menlo_border =  borders$osm_multipolygons %>% 
+#   filter(name == "Menlo Park")
+```
+
+```{r}
+# st_write(menlo_border, "menlo_borders.gpkg")
+# st_write(epa_border, "epa_borders.gpkg")
+# st_write(palo_alto_border, "palo_alto_borders.gpkg")
+```
+
+```{r}
+menlo_border = st_read("menlo_borders.gpkg")
+epa_border = st_read("epa_borders.gpkg")
+palo_alto_border = st_read("palo_alto_borders.gpkg")
+```
+
+
+
+
+```{r}
+# bays = getbb("Palo Alto") %>% 
+#   opq() %>% 
+#   add_osm_feature(key = "natural", value = "bay") %>% 
+#   osmdata_sf()
+# sf_bay = bays$osm_multipolygons %>% 
+#   filter(name == "San Francisco Bay")
+# sf_marsh = bays$osm_multipolygons %>% 
+#   filter(name == "San Francisco Bay (estuarial)")
+```
+
+```{r}
+# st_write(sf_bay, "sf_bay.gpkg")
+# st_write(sf_marsh, "sf_marsh.gpkg")
+```
+
+
+```{r}
+sf_bay = st_read("sf_bay.gpkg")
+sf_marsh = st_read("sf_marsh.gpkg")
+```
+
+```{r}
+# str(palo_alto_border)
+# str(sf_bay)
+```
+
+```{r}
+ggplot() +
+  geom_sf(data = sf_bay)
+```
+
+```{r}
+palo_alto = st_difference(palo_alto_border, sf_bay)
+menlo_park = st_difference(menlo_border, sf_bay)
+epa = st_difference(epa_border, sf_bay)
+```
+
+
+
+```{r}
+ggplot() +
+  geom_sf(data = palo_alto_border, fill = "green", alpha = 0.1) +
+  geom_sf(data = epa_border, fill = "orange", alpha = 0.1) +
+  geom_sf(data = menlo_border, fill = "blue", alpha = 0.1)
+```
+
+```{r}
+ggplot() +
+  geom_sf(data = palo_alto, fill = "green", alpha = 0.1) +
+  geom_sf(data = epa, fill = "orange", alpha = 0.1) +
+  geom_sf(data = menlo_park, fill = "blue", alpha = 0.1)
+```
+
+```{r}
+# palo_alto
+# # xmin(-122.2027, -122.1563, -122.2284)
+# epa
+# menlo_park
+xmin = -122.2284
+ymin = 37.28768
+xmax = -122.0862
+ymax = 37.50792
+```
+
+```{r}
+get_temperature = function(x, y) {
+  # if there's data in this pixel, then average the data her (weighted)
+  # if not, set this as "NA" for now
+  return(1)
+}
+```
+
+```{r}
+granularity = 3
+x = seq(xmin, xmax, length.out = (granularity + 1))
+y = seq(ymin, ymax, length.out = (granularity + 1))
+expand.grid(x = x,y = y) %>% 
+  group_by(y) %>% 
+  mutate(
+    xmin = lag(x),
+    xmax = x)
+# ,
+#     ymin = lag(y),
+#     ymax = y,
+#     temperature = get_temperature(x,y)) %>%
+#   drop_na()
+```
+
+```{r}
+# ggplot() +
+#   geom_sf(data = map$osm_points) +
+# geom_sf(data = am, aes(color = t_f)) +
+#   scale_color_continuous(low="lightblue",high="red")
+```
+
+```{r}
+# expand.grid()
+```
+
+
+
+
+
+```{r}
+tmp_data = st_coordinates(am) |>
+  as.data.frame() |>
+  cbind(am)
+```
+
+```{r}
+# install.packages("akima")
+library(akima)
+```
+
+```{r}
+# Create interpolation, interp fxn associated with akima, X is lat, Y is long, Z is temp
+interp_result <- with(tmp_data,
+                        interp(x = X, y = Y, z = t_f,
+                              duplicate = "mean")) # handles duplicate pts
+```
+
+```{r}
+# convert this list we js made into a df for ggplot, $ pulls specific column from df
+interp_df <- expand.grid(x = interp_result$x, y = interp_result$y)
+interp_df$temperature <- as.vector(interp_result$z)
+imputed_temperatures = interp_df %>%  drop_na()
+```
+
+```{r}
+ggplot() +
+  geom_sf(data = palo_alto, fill = "green", alpha = 0.1) +
+  geom_sf(data = epa, fill = "orange", alpha = 0.1) +
+  geom_sf(data = menlo_park, fill = "blue", alpha = 0.1) +
+geom_raster(
+    data = imputed_temperatures,
+    aes(x = x, y = y, fill=temperature),
+    alpha = 0.8
+) + 
+  scale_fill_continuous(low = "lightblue", high = "red") 
+```
+
+```{r}
+
+```
+
+
+```{r}
+# interp_result <- with(tmp_data,
+#                       interp(x = X, y = Y, z = t_f,
+#                              duplicate = "mean"))  # handles duplicate points
+```
+
+```{r}
+# granularity = 50
+# x = seq(xmin, xmax, length.out = (granularity + 1))
+# y = seq(ymin, ymax, length.out = (granularity + 1)) 
+# discretized_temperatures = 
+# expand.grid(x = x, y = y) |>
+  # group_by(y) |>
+  # mutate(
+  #   xmin = lag(x),
+  #   xmax = x
+  # ) |>
+  # ungroup() |>
+  # drop_na() |>
+  # group_by(xmin, xmax) |>
+  # mutate(
+  #   ymin = lag(y),
+  #   ymax = y
+  # ) |>
+  # ungroup() |>
+  # drop_na() |>
+  # mutate(temperature = get_temperature(xmin, xmax, ymin, ymax)) %>% 
+  # drop_na() %>% 
+  # mutate(temperature = get_temperature(xmin, xmax, ymin, ymax)) %>% 
+  # drop_na() %>% 
+  # mutate(X = (xmin + xmax) / 2,
+  #        Y = (ymin + ymax) / 2)
+  
+```
+
+```{r}
+# ggplot() +
+#   geom_sf(data = palo_alto, fill = "green", alpha = 0.1) +
+#   geom_sf(data = epa, fill = "orange", alpha = 0.1) +
+#   # geom_sf(data = menlo_park, fill = "blue", alpha = 0.1) +
+#   # geom_point(data = imputed_temperatures, aes(x = xmin, y = ymin))
+# 
+#   
+#   stat_density(
+#       data = discretized_temperatures, 
+#       aes(x = X, y = Y, fill = after_stat(density)),
+#       geom = "raster",
+#       position = "identity")
+```
+
+```{r}
+# Convert to data frame for ggplot
+interp_df <- expand.grid(x = interp_result$x, y = interp_result$y)
+interp_df$temperature <- as.vector(interp_result$z)
+imputed_temperatures = interp_df |> drop_na()
+```
+
+
+```{r}
+ggplot() +
+  geom_sf(data = palo_alto, fill = "green", alpha = 0.1) +
+  geom_sf(data = epa, fill = "orange", alpha = 0.1) +
+  geom_sf(data = menlo_park, fill = "blue", alpha = 0.1) +
+  geom_raster(
+    data = imputed_temperatures,
+    aes(x = x, y = y, fill=temperature),
+    alpha = 0.8
+  ) +
+  scale_fill_continuous(low = "lightblue", high = "red")
+```
+
+
+```{r}
+impervious_surfaces = st_read("Palo_Alto_Impervious/Palo_Alto_Impervious_no open space.shp")
+```
+
+```{r}
+ggplot() +
+geom_sf(data = impervious_surfaces, aes(fill = Percent_Im)) +
+  scale_fill_continuous(low="lightblue",high="red")
+```
+
+```{r}
+# different data uses different projections of the globe onto a 2-d plane
+# get the coordinate system for am data
+am_crs = st_crs(am)
+# get the coordinate system for impervious surfaces data
+imp_crs = st_crs(impervious_surfaces)
+
+# turn the imputed temperatures back into a simple features collection (with a geometry column)
+tmp = st_as_sf(imputed_temperatures, coords = c("x", "y"), crs = am_crs) |>
+  # convert the coordinate system to match the projection for impervious surfaces
+  st_transform(imp_crs)
+
+# combine the data!!!!!!
+df = st_join(tmp, impervious_surfaces, join = st_within) |> clean_names()
+
+# graph the relationship between temperature and percent_im
+df |>
+  ggplot() +
+  aes(x = percent_im, y = temperature) +
+  geom_smooth(method = "lm") + # line of best fit
+  geom_point(alpha = 0.5) # scatterplot
+
+# do a linear regression
+lm(temperature ~ percent_im, data = df) |>
+  # compute the p-value, etc.
+  summary()
+```
+
+
+
+```{r}
+# margin of error for slopes!!! doesn't include 0 SOOO WE ARE STATISTICALLY SIGNIFICANT
+point_estimate = 0.6758
+se = 0.1765
+tstar = qt(p = 0.975, df = 443)
+moe = tstar*se
+point_estimate - moe
+point_estimate + moe
+```
+
+
+
+
+
+
+
+```{r}
+# borders = getbb("Palo Alto") %>% 
+#   opq() %>% 
+#   add_osm_feature(key = "boundary", value = "administrative") %>% 
+#   osmdata_sf()
+# 
+# palo_alto_border = borders$osm_multipolygons %>% 
+#   filter(name == "Palo Alto")
+# epa_border =  borders$osm_multipolygons %>% 
+#   filter(name == "East Palo Alto")
+# menlo_border =  borders$osm_multipolygons %>% 
+#   filter(name == "Menlo Park")
+```
+
+
+```{r}
+ggplot() +
+  geom_sf(data = palo_alto, fill = "green", alpha = 0.1) +
+  geom_sf(data = epa, fill = "orange", alpha = 0.1) +
+  geom_sf(data = menlo_park, fill = "blue", alpha = 0.1) +
+geom_sf(data = impervious_surfaces, aes(fill = Percent_Im), color = NA) +
+  scale_fill_continuous(low="lightblue",high="red")
+```
+
+
+```{r}
+#install.packages("geosphere")
+library(geosphere)
+```
+
+
+```{r}
+# getting data from coastline
+# coast = osm <- getbb(place_name = "Palo Alto") %>% 
+#   opq() %>% 
+#   add_osm_feature(key = "natural", value = "coastline") %>% 
+#   osmdata_sf()
+#  coastlines = coast$osm_lines
+```
+
+```{r}
+ # st_write(coastlines, "coastlines.gpkg")
+```
+
+```{r}
+coastlines = st_read("coastlines.gpkg")
+```
+
+
+
+```{r}
+orig_coord_system = st_crs(df)
+
+df_for_distances = st_transform(df, crs = "WGS84")
+```
+
+```{r}
+# use dist2line from geosphere - only works for WGS84 (coordinate system)
+dist = geosphere::dist2Line(
+  p = st_coordinates(df_for_distances),
+  line = st_coordinates(coastlines)[,1:2]
+)
+```
+
+
+
+```{r}
+# use dist2Line from geosphere - only works for WGS84
+#data
+
+#get current coord system
+orig_coord_system = st_crs(df)
+
+# change coord system
+df_for_distances = st_transform(df, crs = "WGS84")
+ 
+dist = dist2Line(
+  p = st_coordinates(df_for_distances),
+  line = st_coordinates(coastlines)[,1:2]
+)
+```
+
+```{r}
+# great - now we find distance to coastline and express that via lines (actual distance is represented in feet)
+```
+
+```{r}
+df_data = st_coordinates(df_for_distances) |>
+  as.data.frame() |>
+  cbind(df_for_distances)
+
+#combine initial data with distance to coastline
+df_dists <- df_data |>
+  rename(y=Y,x=X) |>
+  cbind(dist) |>
+  mutate(miles=distance/1609)
+
+#plot
+ggplot() +
+  geom_sf(data=coastlines) +
+  geom_sf(data=df_for_distances, size = .1) +
+  geom_segment(data=df_dists,aes(x=x,y=y,xend=lon,yend=lat), alpha = 0.1)
+ggsave("pretty_star.jpg")
+```
+```{r}
+# from dplyer
+df_dists %>% 
+  dplyr::select(temperature, percent_im, miles) %>% 
+  drop_na()
+```
+
+```{r}
+#lm for linear model
+
+# # graph the relationship between temperature and percent_im
+# df_dists |>
+#   ggplot() +
+#   aes(x = percent_im + miles, y = temperature) +
+#   geom_smooth(method = "lm") + # line of best fit
+#   geom_point(alpha = 0.5) # scatterplot
+
+# do a linear regression
+lm(temperature ~ percent_im + miles, data = df_dists) |>
+  # compute the p-value, etc.
+  summary()
+
+# margin of error for slopes!!! doesn't include 0 SOOO WE ARE STATISTICALLY SIGNIFICANT
+point_estimate = 0.9107
+se = 0.1920
+tstar = qt(p = 0.975, df = 442)
+moe = tstar*se
+point_estimate - moe
+point_estimate + moe
+
+# margin of error for slopes!!! doesn't include 0 SOOO WE ARE STATISTICALLY SIGNIFICANT
+point_estimate = -0.1951
+se = 0.0657
+tstar = qt(p = 0.975, df = 442)
+moe = tstar*se
+point_estimate - moe
+point_estimate + moe
+```
+# REPEATING FOR "AF"/AFTERNOON DATA SET
