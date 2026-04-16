@@ -1,0 +1,496 @@
+---
+title: "Bay Area Heat Mapping"
+format: html
+editor: visual
+---
+
+# Setup
+
+## Load R Libraries
+
+For general data wrangling that Dr. EB likes.
+
+```{r, message = FALSE}
+library(tidyverse)
+library(janitor)
+```
+
+For working with map data
+
+```{r, message = FALSE}
+library(sf)
+library(osmdata)
+```
+
+For imputing temperatures
+
+```{r, message = FALSE}}
+library(akima)
+```
+
+For calculating distances on the surface of the earth
+
+```{r, message = FALSE}
+library(geosphere)
+```
+
+## Load Temperature Data
+
+### Morning
+
+Load the \[Bay Area Head Mapping Project data\](<https://osf.io/apsx5/files/wdpb5?view_only=1cef760d3865497890a7dd51e859d8d3>) for the morning.
+
+```{r}
+am = st_read("traverses_chw_palo_alto_california_090424/palo-alto-california_am_trav.shp")
+```
+
+Plot the raw heat mapping data for morning.
+
+```{r}
+ggplot() +
+  geom_sf(data = am, aes(color = t_f)) +
+  scale_color_continuous(low="lightblue",high="red") +
+  labs(colour = "Morning Temperature")
+```
+
+Load the Bay Area Head Mapping Project data for the afternoon.
+
+### Afternoon
+
+```{r, message = FALSE}
+pm = st_read("traverses_chw_palo_alto_california_090424/palo-alto-california_pm_trav.shp")
+```
+
+## Get Impervious Surfaces Data
+
+Read impervious surfaces data, which Anna Freitas shared with us. She said:
+
+> I've attached the data we have on impervious surfaces. The analysis was conducted a few years ago as part of our Green Stormwater Infrastructure Plan development and did not measure impervious surface directly. Instead, staff in Watershed Protection used land use data and a standard method of estimating percent imperviousness by land use.
+
+```{r}
+impervious_surfaces = st_read("Palo_Alto_Impervious/Palo_Alto_Impervious_no open space.shp") %>% 
+  select(Percent_Im)
+```
+
+Plot impervious surfaces data.
+
+```{r}
+ggplot() +
+geom_sf(data = impervious_surfaces, aes(fill = Percent_Im)) +
+  scale_fill_continuous(low="lightblue",high="red")
+```
+
+## Get Map Data
+
+### Cities
+
+Download border data for Palo Alto, East Palo Alto, and Menlo Park from \[OSM\](<https://www.openstreetmap.org/>).
+
+(Leave commented out unless running for the first time, because this takes a long time to run)
+
+```{r}
+# borders = getbb("Palo Alto") %>%
+#   opq() %>%
+#   add_osm_feature(key = "boundary", value = "administrative") %>%
+#   osmdata_sf()
+# 
+# palo_alto_border = borders$osm_multipolygons %>%
+#   filter(name == "Palo Alto")
+# epa_border =  borders$osm_multipolygons %>%
+#   filter(name == "East Palo Alto")
+# menlo_border =  borders$osm_multipolygons %>%
+#   filter(name == "Menlo Park")
+```
+
+Cache/load the data locally.
+
+```{r}
+# # Cache
+# st_write(menlo_border, "data/menlo_borders.gpkg")
+# st_write(epa_border, "data/epa_borders.gpkg")
+# st_write(palo_alto_border, "data/palo_alto_borders.gpkg")
+# # Load
+menlo_border = st_read("data/menlo_borders.gpkg") %>% select()
+epa_border = st_read("data/epa_borders.gpkg") %>% select()
+palo_alto_border = st_read("data/palo_alto_borders.gpkg") %>% select()
+```
+
+### Bay
+
+Download SF Bay data.
+
+```{r}
+# bays = getbb("Palo Alto") %>%
+#   opq() %>%
+#   add_osm_feature(key = "natural", value = "bay") %>%
+#   osmdata_sf()
+# sf_bay = bays$osm_multipolygons %>%
+#   filter(name == "San Francisco Bay")
+# sf_marsh = bays$osm_multipolygons %>%
+#   filter(name == "San Francisco Bay (estuarial)")
+```
+
+Cache/load the data locally.
+
+```{r}
+# # Cache
+# st_write(sf_bay, "data/sf_bay.gpkg")
+# st_write(sf_marsh, "data/sf_marsh.gpkg")
+# Load
+sf_bay = st_read("data/sf_bay.gpkg") %>% select()
+sf_marsh = st_read("data/sf_marsh.gpkg") %>% select()
+# # Inspect raw structure
+# str(palo_alto_border)
+# str(sf_bay)
+```
+
+### Coastlines
+
+Get coastline data from OSM.
+
+```{r}
+# # getting data from coastline
+# coast = osm <- getbb(place_name = "Palo Alto") %>%
+#   opq() %>%
+#   add_osm_feature(key = "natural", value = "coastline") %>%
+#   osmdata_sf()
+#  coastlines = coast$osm_lines
+```
+
+Cache/load the data locally.
+
+```{r}
+# # Cache
+# st_write(coastlines, "data/coastlines.gpkg")
+# Load
+coastlines = st_read("data/coastlines.gpkg") %>% select()
+```
+
+# Analysis
+
+## Exclude Water
+
+Graph all of SF Bay
+
+```{r}
+ggplot() +
+  geom_sf(data = sf_bay)
+```
+
+Find non-water parts of Palo Alto, East Palo Alto, and Menlo Park:
+
+```{r}
+palo_alto = st_difference(palo_alto_border, sf_bay)
+menlo_park = st_difference(menlo_border, sf_bay)
+epa = st_difference(epa_border, sf_bay)
+```
+
+Graph city borders:
+
+```{r}
+ggplot() +
+  geom_sf(data = palo_alto_border, fill = "green", alpha = 0.1) +
+  geom_sf(data = epa_border, fill = "orange", alpha = 0.1) +
+  geom_sf(data = menlo_border, fill = "blue", alpha = 0.1)
+```
+
+Graph non-water:
+
+```{r}
+ggplot() +
+  geom_sf(data = palo_alto, fill = "green", alpha = 0.1) +
+  geom_sf(data = epa, fill = "orange", alpha = 0.1) +
+  geom_sf(data = menlo_park, fill = "blue", alpha = 0.1)
+```
+
+## Impute Temperatures
+
+### Morning
+
+Convert heat mapping data to a dataframe for analysis.
+
+```{r}
+tmp_data = st_coordinates(am) |>
+  as.data.frame() |>
+  cbind(am)
+```
+
+Impute temperatures
+
+```{r}
+granularity = 60
+# Create interpolation, interp fxn associated with akima, X is lat, Y is long, Z is temp
+interp_result <- with(tmp_data,
+                        interp(x = X, y = Y, z = t_f,
+                               xo = seq(-122.2142, -122.1057, length.out = granularity),
+                               yo = seq(37.48534, 37.39437, length.out = granularity),
+                              duplicate = "mean")) # handles duplicate pts
+
+# convert this list we js made into a df for ggplot, $ pulls specific column from df
+interp_df <- expand.grid(x = interp_result$x, y = interp_result$y)
+interp_df$temperature <- as.vector(interp_result$z)
+imputed_temperatures = interp_df %>%  drop_na()
+```
+
+Plot imputed temperatures
+
+```{r}
+# ggplot() +
+#   geom_sf(data = palo_alto, fill = "green", alpha = 0.1) +
+#   geom_sf(data = epa, fill = "orange", alpha = 0.1) +
+#   geom_sf(data = menlo_park, fill = "blue", alpha = 0.1) +
+#   geom_raster(
+#     data = imputed_temperatures,
+#     aes(x = x, y = y, fill=temperature),
+#     alpha = 0.8
+#   ) + 
+#   scale_fill_continuous(low = "lightblue", high = "red") 
+```
+Combine cities.
+
+```{r}
+three_cities = palo_alto %>% 
+  st_union(menlo_park, by_feature = TRUE) %>% 
+  st_union(epa, by_feature = TRUE)
+```
+
+Convert temperature data to matching shape file.
+
+```{r}
+# different data uses different projections of the globe onto a 2-d plane
+# get the coordinate system for am data
+am_crs = st_crs(am)
+# get the coordinate system for city data
+cities_crs = st_crs(three_cities)
+
+# turn the imputed temperatures into a simple features collection (with a geometry column)
+tmp = st_as_sf(imputed_temperatures, coords = c("x", "y"), crs = am_crs) |>
+  # convert the coordinate system to match the projection for cities
+  st_transform(cities_crs)
+```
+
+Intersect temperature data and city boundaries
+
+```{r}
+tmp_in_bounds = st_intersection(tmp, three_cities)
+```
+
+Plot where there's data.
+
+```{r}
+tmp_bbox = tmp_in_bounds %>% st_bbox()
+palo_alto_with_data = st_crop(palo_alto, tmp_bbox)
+epa_with_data = st_crop(epa, tmp_bbox)
+menlo_park_with_data = st_crop(menlo_park, tmp_bbox)
+
+ggplot() +
+  geom_sf(data = palo_alto_with_data, fill = "green", alpha = 0.1) +
+  geom_sf(data = epa_with_data, fill = "orange", alpha = 0.1) +
+  geom_sf(data = menlo_park_with_data, fill = "blue", alpha = 0.1) +
+  geom_sf(
+      data = tmp_in_bounds,
+      aes(colour=temperature),
+      alpha = 0.5
+  ) +
+  scale_colour_continuous(low = "lightblue", high = "red") 
+```
+
+Converting temperatures to dataframe for better plot:
+
+```{r}
+tmp_dataframe = cbind(
+  st_drop_geometry(tmp_in_bounds),
+  st_coordinates(tmp_in_bounds)
+)
+```
+
+Slightly nicer plot of imputed temperatures within city boundaries:
+
+```{r}
+ggplot() +
+  geom_sf(data = palo_alto_with_data, fill = "green", alpha = 0.1) +
+  geom_sf(data = epa_with_data, fill = "orange", alpha = 0.1) +
+  geom_sf(data = menlo_park_with_data, fill = "blue", alpha = 0.1) +
+  geom_raster(
+    data = tmp_dataframe,
+    aes(x = X, y = Y, fill=temperature),
+    alpha = 0.8
+  ) +
+  scale_fill_continuous(low = "lightblue", high = "red")
+```
+
+### Afternoon
+
+## Linear Regression: Morning Temperature ~ Impervious Surface
+
+Combine temperatures (within city boundaries) and impervious surface data.
+
+```{r}
+# different data uses different projections of the globe onto a 2-d plane
+# get the coordinate system for am data
+tmp_crs = st_crs(tmp_in_bounds)
+# get the coordinate system for impervious surfaces data
+imp_crs = st_crs(impervious_surfaces)
+
+# turn the imputed temperatures back into a simple features collection (with a geometry column)
+tmp = tmp_in_bounds |>
+  # convert the coordinate system to match the projection for impervious surfaces
+  st_transform(imp_crs)
+
+# combine the data!!!!!!
+df = st_join(tmp, impervious_surfaces, join = st_within) |> clean_names()
+
+# graph the relationship between temperature and percent_im
+df |>
+  ggplot() +
+  aes(x = percent_im, y = temperature) +
+  geom_smooth(method = "lm") + # line of best fit
+  geom_point(alpha = 0.5) # scatterplot
+
+# do a linear regression
+m = lm(temperature ~ percent_im, data = df) |>
+  # compute the p-value, etc.
+  summary()
+m
+```
+
+Calculate margin of error for slopes
+
+```{r}
+# margin of error for slopes!!! doesn't include 0 SOOO WE ARE STATISTICALLY SIGNIFICANT
+point_estimate = m$coefficients["percent_im", "Estimate"] #0.6758 
+se = m$coefficients["percent_im", "Std. Error"] #0.1765
+tstar = qt(p = 0.975, df = m$df[2])  #443)
+moe = tstar*se
+point_estimate - moe
+point_estimate + moe
+```
+
+## Linear Regression: Morning Temperature ~ Impervious Surface + Distance to Coastline
+
+Plot impervious surface data
+
+```{r}
+ggplot() +
+  geom_sf(data = palo_alto_with_data, fill = "green", alpha = 0.1) +
+  geom_sf(data = epa_with_data, fill = "orange", alpha = 0.1) +
+  geom_sf(data = menlo_park_with_data, fill = "blue", alpha = 0.1) +
+geom_sf(data = impervious_surfaces, aes(fill = Percent_Im), color = NA) +
+  scale_fill_continuous(low="lightblue",high="red")
+```
+
+Calculate distances to coastline.
+
+```{r}
+# use dist2line from geosphere - only works for WGS84 (coordinate system)
+orig_coord_system = st_crs(df)
+
+df_for_distances = st_transform(df, crs = "WGS84")
+
+dist = geosphere::dist2Line(
+  p = st_coordinates(df_for_distances),
+  line = st_coordinates(coastlines)[,1:2]
+)
+```
+
+great - now we find distance to coastline and express that via lines (actual distance is represented in feet)
+
+```{r}
+df_data = st_coordinates(df_for_distances) |>
+  as.data.frame() |>
+  cbind(df_for_distances)
+
+#combine initial data with distance to coastline
+df_dists <- df_data |>
+  rename(y=Y,x=X) |>
+  cbind(dist) |>
+  mutate(miles=distance/1609)
+
+#plot
+ggplot() +
+  geom_sf(data=coastlines) +
+  geom_sf(data=df_for_distances, size = .1) +
+  geom_segment(data=df_dists,aes(x=x,y=y,xend=lon,yend=lat), alpha = 0.1)
+ggsave("pretty_star.jpg")
+```
+
+```{r}
+# from dplyer
+df_dists %>% 
+  dplyr::select(temperature, percent_im, miles) %>% 
+  drop_na()
+```
+
+```{r}
+#lm for linear model
+
+# do a linear regression
+m = lm(temperature ~ percent_im + miles, data = df_dists) |>
+  # compute the p-value, etc.
+  summary()
+m
+```
+
+Calculate margin of error for Percent Impervious slope:
+
+```{r}
+# margin of error for slopes!!! doesn't include 0 SOOO WE ARE STATISTICALLY SIGNIFICANT
+point_estimate = m$coefficients["percent_im", "Estimate"]
+se = m$coefficients["percent_im", "Std. Error"]
+tstar = qt(p = 0.975, df = m$df[2])
+moe = tstar*se
+point_estimate - moe
+point_estimate + moe
+```
+
+Calculate margin of error for miles from coastline slope:
+
+```{r}
+# margin of error for slopes!!! doesn't include 0 SOOO WE ARE STATISTICALLY SIGNIFICANT
+point_estimate = m$coefficients["miles", "Estimate"]
+se = m$coefficients["miles", "Std. Error"]
+tstar = qt(p = 0.975, df = m$df[2])
+moe = tstar*se
+point_estimate - moe
+point_estimate + moe
+```
+
+```{r}
+# # margin of error for slopes!!! doesn't include 0 SOOO WE ARE STATISTICALLY SIGNIFICANT
+# point_estimate = 0.9107
+# se = 0.1920
+# tstar = qt(p = 0.975, df = 442)
+# moe = tstar*se
+# point_estimate - moe
+# point_estimate + moe
+# 
+# # margin of error for slopes!!! doesn't include 0 SOOO WE ARE STATISTICALLY SIGNIFICANT
+# point_estimate = -0.1951
+# se = 0.0657
+# tstar = qt(p = 0.975, df = 442)
+# moe = tstar*se
+# point_estimate - moe
+# point_estimate + moe
+```
+
+## Linear Regression: Afternoon Temperature ~ Impervious Surface
+
+(repeat above, but for afternoon)
+
+## Linear Regression: Afternoon Temperature ~ Impervious Surface + Distance to Coastline
+
+(repeat above, but for afternoon)
+
+## Linear Regression: Temperature ~ Impervious Surface + Distance to Coastline + Time of Day
+
+combine datasets, with a new variable time of day that's either "morning" or "afternoon"
+
+
+
+
+
+```{r}
+st_interpolate_aw()
+st_filter()
+st_make_grid()
+```
