@@ -193,7 +193,7 @@ coastlines = st_read("data/coastlines.gpkg") %>% select()
 Convert temperature data to a dataframe
 
 ```{r}
-tmp_data = cbind(
+am_tmp_data = cbind(
   am %>% st_drop_geometry,
   am %>% st_coordinates
 )
@@ -208,16 +208,16 @@ maxx = max(tmp_data$X)
 miny = min(tmp_data$Y)
 maxy = max(tmp_data$Y)
 # Create interpolation, interp fxn associated with akima, X is lat, Y is long, Z is temp
-interp_result <- with(tmp_data,
+am_interp_result <- with(am_tmp_data,
                         interp(x = X, y = Y, z = t_f,
                                xo = seq(minx, maxx, length.out = granularity),
                                yo = seq(miny, maxy, length.out = granularity),
                               duplicate = "mean")) # handles duplicate pts
 
 # convert this list we js made into a df for ggplot, $ pulls specific column from df
-interp_df <- expand.grid(x = interp_result$x, y = interp_result$y)
-interp_df$temperature <- as.vector(interp_result$z)
-imputed_temperatures = interp_df %>%  drop_na()
+am_interp_df <- expand.grid(x = am_interp_result$x, y = am_interp_result$y)
+am_interp_df$temperature <- as.vector(am_interp_result$z)
+am_imputed_temperatures = am_interp_df %>%  drop_na()
 ```
 
 Plot imputed temperatures
@@ -228,7 +228,7 @@ ggplot() +
   # geom_sf(data = epa_border, fill = "orange", alpha = 0.1) +
   # geom_sf(data = menlo_border, fill = "blue", alpha = 0.1) +
 geom_raster(
-    data = imputed_temperatures,
+    data = am_imputed_temperatures,
     aes(x = x, y = y, fill=temperature),
     alpha = 0.8
 ) + 
