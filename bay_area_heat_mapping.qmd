@@ -188,9 +188,9 @@ coastlines = st_read("data/coastlines.gpkg") %>% dplyr::select()
 
 # Analysis
 
-### Impute temperatures
+## Impute temperatures
 
-#### Morning
+### Morning
 
 Convert temperature data to a dataframe
 
@@ -237,7 +237,7 @@ geom_raster(
   scale_fill_continuous(low = "lightblue", high = "red") 
 ```
 
-#### Afternoon
+### Afternoon
 
 
 ```{r}
@@ -278,7 +278,7 @@ geom_raster(
   scale_fill_continuous(low = "lightblue", high = "red") 
 ```
 
-#### Evening
+### Evening
 
 
 ```{r}
@@ -319,7 +319,7 @@ geom_raster(
   scale_fill_continuous(low = "lightblue", high = "red") 
 ```
 
-### Remove water from cities
+## Remove water from cities
 
 Plot entire SF Bay
 
@@ -476,7 +476,6 @@ ggplot() +
 ggsave("af_temperatures.png")
 ```
 
-
 ### Evening
 
 ```{r}
@@ -533,6 +532,112 @@ ggplot() +
     title = "Imputed Temperatures (Evening)",
     fill = "Evening Temperature (°F)")
 ggsave("pm_temperatures.png")
+```
+## Calculate distances to coastline.
+
+### Morning
+
+```{r}
+# use dist2line from geosphere - only works for WGS84 (coordinate system)
+am_orig_coord_system = st_crs(am_combo)
+
+am_combo_for_distances = st_transform(am_combo, crs = "WGS84")
+# 
+# am_df_data = st_coordinates(am_combo_for_distances) |>
+#   as.data.frame() |>
+#   cbind(am_combo_for_distances)
+# 
+# am_dist = geosphere::dist2Line(
+#   p = st_coordinates(am_combo_for_distances),
+#   line = st_coordinates(coastlines)[,1:2]
+# )
+# 
+# #combine initial data with distance to coastline
+# am_df_dists <- am_df_data |>
+#   rename(y=Y,x=X) |>
+#   cbind(dist) |>
+#   mutate(miles=distance/1609)
+```
+
+```{r}
+# # Cache
+# write_csv(am_df_dists, "data/am_df_dists.csv")
+# Load
+am_df_dists = read_csv("data/am_df_dists.csv")
+```
+
+great - now we find distance to coastline and express that via lines (actual distance is represented in feet)
+
+```{r}
+#plot
+ggplot() +
+  geom_sf(data=coastlines) +
+  geom_sf(data=am_combo_for_distances, size = .1) +
+  geom_segment(data=am_df_dists,aes(x=x,y=y,xend=lon,yend=lat), alpha = 0.1)
+ggsave("pretty_star.jpg")
+```
+
+
+### Afternoon
+
+```{r}
+# use dist2line from geosphere - only works for WGS84 (coordinate system)
+af_orig_coord_system = st_crs(af_combo)
+
+af_combo_for_distances = st_transform(af_combo, crs = "WGS84")
+
+af_df_data = st_coordinates(af_combo_for_distances) |>
+  as.data.frame() |>
+  cbind(af_combo_for_distances)
+
+# af_dist = geosphere::dist2Line(
+#   p = st_coordinates(af_combo_for_distances),
+#   line = st_coordinates(coastlines)[,1:2]
+# )
+# 
+# #combine initial data with distance to coastline
+# af_df_dists <- af_df_data |>
+#   rename(y=Y,x=X) |>
+#   cbind(af_dist) |>
+#   mutate(miles=distance/1609)
+```
+
+```{r}
+# # Cache
+# write_csv(af_df_dists, "data/af_df_dists.csv")
+# Load
+af_df_dists = read_csv("data/af_df_dists.csv")
+```
+
+### Evening
+
+```{r}
+# use dist2line from geosphere - only works for WGS84 (coordinate system)
+pm_orig_coord_system = st_crs(pm_combo)
+
+pm_combo_for_distances = st_transform(pm_combo, crs = "WGS84")
+
+pm_df_data = st_coordinates(pm_combo_for_distances) |>
+  as.data.frame() |>
+  cbind(pm_combo_for_distances)
+
+# pm_dist = geosphere::dist2Line(
+#   p = st_coordinates(pm_combo_for_distances),
+#   line = st_coordinates(coastlines)[,1:2]
+# )
+# 
+# #combine initial data with distance to coastline
+# pm_df_dists <- pm_df_data |>
+#   rename(y=Y,x=X) |>
+#   cbind(pm_dist) |>
+#   mutate(miles=distance/1609)
+```
+
+```{r}
+# # Cache
+# write_csv(pm_df_dists, "data/pm_df_dists.csv")
+# Load
+pm_df_dists = read_csv("data/pm_df_dists.csv")
 ```
 
 ## Linear Regressions
@@ -624,47 +729,8 @@ point_estimate - moe
 point_estimate + moe
 ```
 
-## Calculate distances to coastline.
 
-```{r}
-# use dist2line from geosphere - only works for WGS84 (coordinate system)
-orig_coord_system = st_crs(am_combo)
-
-df_for_distances = st_transform(am_combo, crs = "WGS84")
-
-# dist = geosphere::dist2Line(
-#   p = st_coordinates(df_for_distances),
-#   line = st_coordinates(coastlines)[,1:2]
-# )
-# df_data = st_coordinates(df_for_distances) |>
-#   as.data.frame() |>
-#   cbind(df_for_distances)
-# #combine initial data with distance to coastline
-# df_dists <- df_data |>
-#   rename(y=Y,x=X) |>
-#   cbind(dist) |>
-#   mutate(miles=distance/1609)
-```
-
-```{r}
-# # Cache
-# write_csv(df_dists, "data/dist.csv")
-# Load
-df_dists = read_csv("data/dist.csv")
-```
-
-great - now we find distance to coastline and express that via lines (actual distance is represented in feet)
-
-```{r}
-#plot
-ggplot() +
-  geom_sf(data=coastlines) +
-  geom_sf(data=df_for_distances, size = .1) +
-  geom_segment(data=df_dists,aes(x=x,y=y,xend=lon,yend=lat), alpha = 0.1)
-ggsave("pretty_star.jpg")
-```
-
-## Linear Regression: Morning Temperature \~ Impervious Surface + Distance to Coastline
+### Morning Temperature \~ Impervious Surface + Distance to Coastline
 
 ```{r}
 #lm for linear model
