@@ -190,36 +190,39 @@ coastlines = st_read("data/coastlines.gpkg") %>% dplyr::select()
 
 ## Impute temperatures
 
-### Morning
-
-Convert temperature data to a dataframe
+Make a function to impute temperatures for any time of day
 
 ```{r}
-am_tmp_data = cbind(
-  am %>% st_drop_geometry,
-  am %>% st_coordinates
-)
+impute_temperatures = function(df, granularity) {
+  # Convert temperature data to a dataframe
+  tmp_data = cbind(
+    df %>% st_drop_geometry,
+    df %>% st_coordinates
+  )
+  
+  # Interpolate between points
+  minx = min(tmp_data$X)
+  maxx = max(tmp_data$X)
+  miny = min(tmp_data$Y)
+  maxy = max(tmp_data$Y)
+  # Create interpolation, interp fxn associated with akima, X is lat, Y is long, Z is temp
+  interp_result <- with(tmp_data,
+                           interp(x = X, y = Y, z = t_f,
+                                  xo = seq(minx, maxx, length.out = granularity),
+                                  yo = seq(miny, maxy, length.out = granularity),
+                                  duplicate = "mean")) # handles duplicate pts
+  
+  # convert this list we js made into a df for ggplot, $ pulls specific column from df
+  interp_df <- expand.grid(x = interp_result$x, y = interp_result$y)
+  interp_df$temperature <- as.vector(interp_result$z)
+  interp_df %>%  drop_na()
+}
 ```
 
-Interpolate between points
+### Morning
 
 ```{r}
-granularity = 60
-minx = min(am_tmp_data$X)
-maxx = max(am_tmp_data$X)
-miny = min(am_tmp_data$Y)
-maxy = max(am_tmp_data$Y)
-# Create interpolation, interp fxn associated with akima, X is lat, Y is long, Z is temp
-am_interp_result <- with(am_tmp_data,
-                        interp(x = X, y = Y, z = t_f,
-                               xo = seq(minx, maxx, length.out = granularity),
-                               yo = seq(miny, maxy, length.out = granularity),
-                              duplicate = "mean")) # handles duplicate pts
-
-# convert this list we js made into a df for ggplot, $ pulls specific column from df
-am_interp_df <- expand.grid(x = am_interp_result$x, y = am_interp_result$y)
-am_interp_df$temperature <- as.vector(am_interp_result$z)
-am_imputed_temperatures = am_interp_df %>%  drop_na()
+am_imputed_temperatures = impute_temperatures(am, 60)
 ```
 
 Plot imputed temperatures
@@ -241,28 +244,7 @@ geom_raster(
 
 
 ```{r}
-# NOW WE FIND IMPUTED TEMPERATURES FOR AFTERNOON
-af_tmp_data = st_coordinates(af) |>
-  as.data.frame() |>
-  cbind(af)
-```
-
-```{r}
-# Create interpolation, interp fxn associated with akima, X is lat, Y is long, Z is temp
-af_interp_result <- with(af_tmp_data,
-                        interp(x = X, y = Y, z = t_f,
-                              duplicate = "mean")) # handles duplicate pts
-```
-
-```{r}
-# convert this list we js made into a df for ggplot, $ pulls specific column from df
-af_interp_df <- expand.grid(x = af_interp_result$x, y =af_interp_result$y)
-af_interp_df$temperature <- as.vector(af_interp_result$z)
-af_imputed_temperatures = af_interp_df %>%  drop_na()
-```
-
-```{r}
-af_sf_object <- st_as_sf(af_interp_df, coords = c("y", "x"), crs = 4326)
+af_imputed_temperatures = impute_temperatures(af, 60)
 ```
 
 ```{r}
@@ -280,30 +262,8 @@ geom_raster(
 
 ### Evening
 
-
 ```{r}
-# NOW WE FIND IMPUTED TEMPERATURES FOR AFTERNOON
-pm_tmp_data = st_coordinates(pm) |>
-  as.data.frame() |>
-  cbind(pm)
-```
-
-```{r}
-# Create interpolation, interp fxn associated with akima, X is lat, Y is long, Z is temp
-pm_interp_result <- with(pm_tmp_data,
-                        interp(x = X, y = Y, z = t_f,
-                              duplicate = "mean")) # handles duplicate pts
-```
-
-```{r}
-# convert this list we js made into a df for ggplot, $ pulls specific column from df
-pm_interp_df <- expand.grid(x = pm_interp_result$x, y =pm_interp_result$y)
-pm_interp_df$temperature <- as.vector(pm_interp_result$z)
-pm_imputed_temperatures = pm_interp_df %>%  drop_na()
-```
-
-```{r}
-pm_sf_object <- st_as_sf(pm_interp_df, coords = c("y", "x"), crs = 4326)
+pm_imputed_temperatures = impute_temperatures(pm, 60)
 ```
 
 ```{r}
