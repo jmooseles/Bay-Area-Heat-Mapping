@@ -50,7 +50,9 @@ Plot the raw heat mapping data for morning.
 ggplot() +
 geom_sf(data = am, aes(color = t_f)) +
   scale_color_continuous(low="lightblue",high="red"
-                         )
+                         ) + 
+  labs(title = "Continuous Traversal Points (Morning)",
+          color = "Morning Temperature (°F)")
 ```
 
 ### Afternoon
@@ -373,7 +375,7 @@ am_crs = st_crs(am)
 cities_crs = st_crs(three_cities)
 
 # turn the imputed temperatures into a simple features collection (with a geometry column)
-tmp = st_as_sf(imputed_temperatures, coords = c("x", "y"), crs = am_crs) |>
+am_tmp = st_as_sf(am_imputed_temperatures, coords = c("x", "y"), crs = am_crs) |>
   # convert the coordinate system to match the projection for cities
   st_transform(cities_crs)
 ```
@@ -382,61 +384,266 @@ Intersect temperature data and city boundaries
 
 ```{r}
 sf_use_s2(FALSE)
-tmp_in_bounds = st_intersection(tmp, three_cities)
+am_tmp_in_bounds = st_intersection(am_tmp, three_cities)
 ```
 
 Crop city boundaries to where there's data
 
 ```{r}
-tmp_bbox = tmp_in_bounds %>% st_bbox()
-palo_alto_with_data = st_crop(palo_alto, tmp_bbox)
-epa_with_data = st_crop(epa, tmp_bbox)
-menlo_park_with_data = st_crop(menlo_park, tmp_bbox)
+am_tmp_bbox = am_tmp_in_bounds %>% st_bbox()
+am_palo_alto_with_data = st_crop(palo_alto, am_tmp_bbox)
+am_epa_with_data = st_crop(epa, am_tmp_bbox)
+am_menlo_park_with_data = st_crop(menlo_park, am_tmp_bbox)
 ```
 
 Plot imputed temperature within city boundaries
 
 ```{r}
 # convert to dataframe for raster plot
-tmp_dataframe = cbind(
-  st_drop_geometry(tmp_in_bounds),
-  st_coordinates(tmp_in_bounds)
+am_tmp_dataframe = cbind(
+  st_drop_geometry(am_tmp_in_bounds),
+  st_coordinates(am_tmp_in_bounds)
 )
 
 ggplot() +
-  geom_sf(data = palo_alto_with_data, fill = "green", alpha = 0.1) +
-  geom_sf(data = epa_with_data, fill = "orange", alpha = 0.1) +
-  geom_sf(data = menlo_park_with_data, fill = "blue", alpha = 0.1) +
+  geom_sf(data = am_palo_alto_with_data, fill = "green", alpha = 0.1) +
+  geom_sf(data = am_epa_with_data, fill = "orange", alpha = 0.1) +
+  geom_sf(data = am_menlo_park_with_data, fill = "blue", alpha = 0.1) +
   geom_raster(
-    data = tmp_dataframe,
+    data = am_tmp_dataframe,
     aes(x = X, y = Y, fill=temperature),
     alpha = 0.8
   ) +
   scale_fill_continuous(low = "lightblue", high = "red") +
-  labs(x = NULL, y = NULL)
+  labs(
+    x = NULL,
+    y = NULL,
+    title = "Imputed Temperatures (Morning)",
+    fill = "Morning Temperature (°F)")
 ggsave("am_temperatures.png")
 ```
 
 #### Afternoon
 
-## Linear Regression: Morning Temperature \~ Impervious Surface
-
-Combine temperatures (within city boundaries) and impervious surface data.
+Convert temperature data to a simple feature collection with a coordinate system that matches the city data.
 
 ```{r}
 # different data uses different projections of the globe onto a 2-d plane
 # get the coordinate system for am data
-am_crs = st_crs(tmp_in_bounds)
+af_crs = st_crs(af)
+# get the coordinate system for city data
+cities_crs = st_crs(three_cities)
+
+# turn the imputed temperatures into a simple features collection (with a geometry column)
+af_tmp = st_as_sf(af_imputed_temperatures, coords = c("x", "y"), crs = af_crs) |>
+  # convert the coordinate system to match the projection for cities
+  st_transform(cities_crs)
+```
+
+Intersect temperature data and city boundaries
+
+```{r}
+sf_use_s2(FALSE)
+af_tmp_in_bounds = st_intersection(af_tmp, three_cities)
+```
+
+Crop city boundaries to where there's data
+
+```{r}
+af_tmp_bbox = af_tmp_in_bounds %>% st_bbox()
+af_palo_alto_with_data = st_crop(palo_alto, af_tmp_bbox)
+af_epa_with_data = st_crop(epa, af_tmp_bbox)
+af_menlo_park_with_data = st_crop(menlo_park, af_tmp_bbox)
+```
+
+Plot imputed temperature within city boundaries
+
+```{r}
+# convert to dataframe for raster plot
+af_tmp_dataframe = cbind(
+  st_drop_geometry(af_tmp_in_bounds),
+  st_coordinates(af_tmp_in_bounds)
+)
+
+ggplot() +
+  geom_sf(data = af_palo_alto_with_data, fill = "green", alpha = 0.1) +
+  geom_sf(data = af_epa_with_data, fill = "orange", alpha = 0.1) +
+  geom_sf(data = af_menlo_park_with_data, fill = "blue", alpha = 0.1) +
+  geom_raster(
+    data = af_tmp_dataframe,
+    aes(x = X, y = Y, fill=temperature),
+    alpha = 0.8
+  ) +
+  scale_fill_continuous(low = "lightblue", high = "red") +
+  labs(
+    x = NULL,
+    y = NULL,
+    title = "Imputed Temperatures (Afternoon)",
+    fill = "Afternoon Temperature (°F)")
+ggsave("af_temperatures.png")
+```
+
+#### Evening
+
+Convert temperature data to a simple feature collection with a coordinate system that matches the city data.
+
+```{r}
+# different data uses different projections of the globe onto a 2-d plane
+# get the coordinate system for am data
+pm_crs = st_crs(pm)
+# get the coordinate system for city data
+cities_crs = st_crs(three_cities)
+
+# turn the imputed temperatures into a simple features collection (with a geometry column)
+pm_tmp = st_as_sf(pm_imputed_temperatures, coords = c("x", "y"), crs = pm_crs) |>
+  # convert the coordinate system to match the projection for cities
+  st_transform(cities_crs)
+```
+
+Intersect temperature data and city boundaries
+
+```{r}
+sf_use_s2(FALSE)
+pm_tmp_in_bounds = st_intersection(pm_tmp, three_cities)
+```
+
+Crop city boundaries to where there's data
+
+```{r}
+pm_tmp_bbox = pm_tmp_in_bounds %>% st_bbox()
+pm_palo_alto_with_data = st_crop(palo_alto, pm_tmp_bbox)
+pm_epa_with_data = st_crop(epa, pm_tmp_bbox)
+pm_menlo_park_with_data = st_crop(menlo_park, pm_tmp_bbox)
+```
+
+Plot imputed temperature within city boundaries
+
+```{r}
+# convert to dataframe for raster plot
+pm_tmp_dataframe = cbind(
+  st_drop_geometry(pm_tmp_in_bounds),
+  st_coordinates(pm_tmp_in_bounds)
+)
+
+ggplot() +
+  geom_sf(data = pm_palo_alto_with_data, fill = "green", alpha = 0.1) +
+  geom_sf(data = pm_epa_with_data, fill = "orange", alpha = 0.1) +
+  geom_sf(data = pm_menlo_park_with_data, fill = "blue", alpha = 0.1) +
+  geom_raster(
+    data = pm_tmp_dataframe,
+    aes(x = X, y = Y, fill=temperature),
+    alpha = 0.8
+  ) +
+  scale_fill_continuous(low = "lightblue", high = "red") +
+  labs(
+    x = NULL,
+    y = NULL,
+    title = "Imputed Temperatures (Evening)",
+    fill = "Evening Temperature (°F)")
+ggsave("pm_temperatures.png")
+```
+
+## Combine Impervious Surfaces and Temperature Data
+
+Combine temperatures (within city boundaries) and impervious surface data.
+
+### Morning
+
+```{r}
+# different data uses different projections of the globe onto a 2-d plane
+# get the coordinate system for am data
+am_crs = st_crs(am_tmp_in_bounds)
 # get the coordinate system for impervious surfaces data
 imp_crs = st_crs(impervious_surfaces)
 
-tmp = tmp_in_bounds |>
+# combine the data!!!!!!
+am_combo =
+  st_join(
+    am_tmp_in_bounds,
+    # convert the coordinate system to match the projection for tempterature data
+    impervious_surfaces |> st_transform(st_crs(am_tmp_in_bounds)),
+    join = st_within
+  ) |>
+  clean_names() |>
+  drop_na()
+
+# convert to dataframe for raster plot
+am_combo_df = cbind(
+  st_drop_geometry(am_combo),
+  st_coordinates(am_combo)
+)
+```
+
+Crop city boundaries to where there's data
+
+```{r}
+am_combo_tmp_bbox = am_combo %>% st_bbox()
+am_palo_alto_with_data = st_crop(palo_alto, am_combo_tmp_bbox)
+am_epa_with_data = st_crop(epa, am_combo_tmp_bbox)
+am_menlo_park_with_data = st_crop(menlo_park, am_combo_tmp_bbox)
+```
+
+Plot imputed temperature and surface data overlap
+
+```{r}
+ggplot() +
+  geom_sf(data = am_palo_alto_with_data, fill = "green", alpha = 0.1) +
+  geom_sf(data = am_epa_with_data, fill = "orange", alpha = 0.1) +
+  geom_sf(data = am_menlo_park_with_data, fill = "blue", alpha = 0.1) +
+  geom_raster(
+    data = am_combo_df,
+    aes(x = X, y = Y, fill=temperature),
+    alpha = 0.8
+  ) +
+  scale_fill_continuous(low = "lightblue", high = "red") +
+  labs(
+    x = NULL,
+    y = NULL,
+    title = "Imputed Temperatures (Morning)",
+    fill = "Morning Temperature (°F)")
+```
+
+### Afternoon
+
+```{r}
+# different data uses different projections of the globe onto a 2-d plane
+# get the coordinate system for af data
+af_crs = st_crs(af)
+# get the coordinate system for impervious surfaces data
+imp_crs = st_crs(impervious_surfaces)
+
+# turn the imputed temperatures back into a simple features collection (with a geometry column)
+af_tmp = st_as_sf(af_imputed_temperatures, coords = c("x", "y"), crs = af_crs) |>
   # convert the coordinate system to match the projection for impervious surfaces
   st_transform(imp_crs)
 
 # combine the data!!!!!!
-df = st_join(tmp, impervious_surfaces, join = st_within) |> clean_names()
+af_df = st_join(af_tmp, impervious_surfaces, join = st_within) |> clean_names() |> drop_na()
+```
 
+
+### Evening
+
+```{r}
+# different data uses different projections of the globe onto a 2-d plane
+# get the coordinate system for af data
+pm_crs = st_crs(pm)
+# get the coordinate system for impervious surfaces data
+imp_crs = st_crs(impervious_surfaces)
+
+# turn the imputed temperatures back into a simple features collection (with a geometry column)
+pm_tmp = st_as_sf(pm_imputed_temperatures, coords = c("x", "y"), crs = pm_crs) |>
+  # convert the coordinate system to match the projection for impervious surfaces
+  st_transform(imp_crs)
+
+# combine the data!!!!!!
+pm_df = st_join(pm_tmp, impervious_surfaces, join = st_within) |> clean_names() |> drop_na()
+```
+
+
+## Linear Regression: Morning Temperature \~ Impervious Surface
+
+```{r}
 # graph the relationship between temperature and percent_im
 df |>
   ggplot() +
