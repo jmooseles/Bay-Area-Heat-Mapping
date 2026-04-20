@@ -53,6 +53,36 @@ geom_sf(data = am, aes(color = t_f)) +
                          )
 ```
 
+### Afternoon
+
+```{r}
+af = st_read("data/traverses_chw_palo_alto_california_090424/palo-alto-california_af_trav.shp")
+```
+
+```{r}
+ggplot() +
+geom_sf(data = af, aes(color = t_f)) +
+  scale_color_continuous(low="lightblue",high="red"
+                         ) + 
+  labs(title = "Continuous Traversal Points (Afternoon)",
+          color = "Afternoon Temperature (°F)")
+```
+
+### Evening
+
+```{r}
+pm = st_read("data/traverses_chw_palo_alto_california_090424/palo-alto-california_pm_trav.shp")
+```
+
+```{r}
+ggplot() +
+geom_sf(data = pm, aes(color = t_f)) +
+  scale_color_continuous(low="lightblue",high="red"
+                         ) + 
+  labs(title = "Continuous Traversal Points (Evening)",
+          color = "Evening Temperature (°F)")
+```
+
 ## Load Impervious surfaces data
 
 Read impervious surfaces data, which Anna Freitas shared with us. She said:
@@ -210,6 +240,7 @@ geom_raster(
 ) + 
   scale_fill_continuous(low = "lightblue", high = "red") 
 ```
+
 ### Remove water from cities
 
 Plot entire SF Bay
@@ -312,7 +343,7 @@ ggsave("am_temperatures.png")
 
 #### Afternoon
 
-## Linear Regression: Morning Temperature ~ Impervious Surface
+## Linear Regression: Morning Temperature \~ Impervious Surface
 
 Combine temperatures (within city boundaries) and impervious surface data.
 
@@ -384,6 +415,7 @@ df_for_distances = st_transform(df, crs = "WGS84")
 # Load
 df_dists = read_csv("data/dist.csv")
 ```
+
 great - now we find distance to coastline and express that via lines (actual distance is represented in feet)
 
 ```{r}
@@ -395,7 +427,7 @@ ggplot() +
 ggsave("pretty_star.jpg")
 ```
 
-## Linear Regression: Morning Temperature ~ Impervious Surface + Distance to Coastline
+## Linear Regression: Morning Temperature \~ Impervious Surface + Distance to Coastline
 
 ```{r}
 #lm for linear model
