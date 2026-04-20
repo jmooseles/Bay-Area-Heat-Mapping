@@ -87,16 +87,16 @@ pm = st_read("data/traverses_chw_palo_alto_california_090424/palo-alto-californi
 Download border data for Palo Alto, East Palo Alto, and Menlo Park from \[OSM\](<https://www.openstreetmap.org/>).
 
 ```{r}
-# borders = getbb("Palo Alto") %>% 
-#   opq() %>% 
-#   add_osm_feature(key = "boundary", value = "administrative") %>% 
+# borders = getbb("Palo Alto") %>%
+#   opq() %>%
+#   add_osm_feature(key = "boundary", value = "administrative") %>%
 #   osmdata_sf()
 # 
-# palo_alto_border = borders$osm_multipolygons %>% 
+# palo_alto_border = borders$osm_multipolygons %>%
 #   filter(name == "Palo Alto")
-# epa_border =  borders$osm_multipolygons %>% 
+# epa_border =  borders$osm_multipolygons %>%
 #   filter(name == "East Palo Alto")
-# menlo_border =  borders$osm_multipolygons %>% 
+# menlo_border =  borders$osm_multipolygons %>%
 #   filter(name == "Menlo Park")
 ```
 
@@ -274,6 +274,7 @@ tmp = st_as_sf(imputed_temperatures, coords = c("x", "y"), crs = am_crs) |>
 Intersect temperature data and city boundaries
 
 ```{r}
+sf_use_s2(FALSE)
 tmp_in_bounds = st_intersection(tmp, three_cities)
 ```
 
