@@ -25,8 +25,9 @@ am = st_read("traverses_chw_palo_alto_california_090424/palo-alto-california_am_
 ggplot() +
 geom_sf(data = am, aes(color = t_f)) +
   scale_color_continuous(low="lightblue",high="red"
-                         ) 
-+ labs(colour = "Morning Temperature")
+                         ) + 
+  labs(title = "Continuous Traversal Points (Morning)",
+          color = "Morning Temperature (°F)")
 ```
 
 
@@ -171,6 +172,7 @@ tmp_data = st_coordinates(am) |>
   cbind(am)
 ```
 
+
 ```{r}
 # install.packages("akima")
 library(akima)
@@ -183,6 +185,10 @@ interp_result <- with(tmp_data,
                               duplicate = "mean")) # handles duplicate pts
 ```
 
+# how do we convert from X (lat) and Y (long) into an shp file
+
+
+
 ```{r}
 # convert this list we js made into a df for ggplot, $ pulls specific column from df
 interp_df <- expand.grid(x = interp_result$x, y = interp_result$y)
@@ -191,10 +197,29 @@ imputed_temperatures = interp_df %>%  drop_na()
 ```
 
 ```{r}
+sf_object <- st_as_sf(interp_df, coords = c("y", "x"), crs = 4326)
+```
+
+```{r}
+#st_write(sf_object, "holy_data_wtf.shp")
+```
+
+
+
+```{r}
+# st_write(imputed_temperatures, "imputed_temperatures.shp")
+```
+
+```{r}
+# st_write(palo_alto_border, "palo_alto.shp")
+```
+
+
+```{r}
 ggplot() +
   geom_sf(data = palo_alto, fill = "green", alpha = 0.1) +
-  geom_sf(data = epa, fill = "orange", alpha = 0.1) +
-  geom_sf(data = menlo_park, fill = "blue", alpha = 0.1) +
+ # geom_sf(data = epa, fill = "orange", alpha = 0.1) +
+ # geom_sf(data = menlo_park, fill = "blue", alpha = 0.1) +
 geom_raster(
     data = imputed_temperatures,
     aes(x = x, y = y, fill=temperature),
@@ -204,7 +229,44 @@ geom_raster(
 ```
 
 ```{r}
+ggplot() +
+  geom_raster(
+    data = imputed_temperatures,
+    aes(x = x, y = y, fill=temperature),
+    alpha = 0.8
+) + 
+  scale_fill_continuous(low = "lightblue", high = "red") 
+```
 
+ATTEMPT TO TRANSFORM IMPERVIOUS DATA TO CRS FILE
+```{r}
+y <- sf::st_transform(Palo_Alto_Impervious/Palo_Alto_Impervious_Original.shp,
+  crs = sf::st_crs(holy_data_wtf.shp))
+```
+SAME ATTEMPT
+
+```{r}
+air_temperatures_wtf<-st_read("holy_data_wtf.shp")
+palo_alto_border_wtf<-st_read("Palo_Alto_Impervious/Palo_Alto_Impervious_no open space.shp")
+```
+
+```{r}
+shp_transformed <- st_transform(palo_alto_border_wtf, crs = 4326)
+```
+
+```{r}
+# Save the new shapefile
+st_write(shp_transformed, "holy_i_hate_this.shp", delete_layer = TRUE)
+```
+
+
+```{r}
+#y <- sf::st_transform(palo_alto_border_wtf, 
+                    #  crs = sf::st_crs(holy_data_wtf))
+```
+
+```{r}
+#Clip1<- st_intersection(air_temperatures_wtf,palo_alto_border_wtf)
 ```
 
 
@@ -267,6 +329,10 @@ imputed_temperatures = interp_df |> drop_na()
 
 
 ```{r}
+# st_write(imputed_temperatures, "imputed_temperatures.shp")
+```
+
+```{r}
 ggplot() +
   geom_sf(data = palo_alto, fill = "green", alpha = 0.1) +
   geom_sf(data = epa, fill = "orange", alpha = 0.1) +
@@ -275,7 +341,7 @@ ggplot() +
     data = imputed_temperatures,
     aes(x = x, y = y, fill=temperature),
     alpha = 0.8
-  ) +
+  ) + 
   scale_fill_continuous(low = "lightblue", high = "red")
 ```
 
@@ -287,7 +353,9 @@ impervious_surfaces = st_read("Palo_Alto_Impervious/Palo_Alto_Impervious_no open
 ```{r}
 ggplot() +
 geom_sf(data = impervious_surfaces, aes(fill = Percent_Im)) +
-  scale_fill_continuous(low="lightblue",high="red")
+  scale_fill_continuous(low="lightblue",high="red")+ 
+  labs(title = "Percent of Impervious Surfaces According to Land Use",
+          fill = "Percent")
 ```
 
 ```{r}
@@ -310,7 +378,10 @@ df |>
   ggplot() +
   aes(x = percent_im, y = temperature) +
   geom_smooth(method = "lm") + # line of best fit
-  geom_point(alpha = 0.5) # scatterplot
+  geom_point(alpha = 0.5) +
+  labs(title = "Morning Temperature vs Percent of Impervious Surface",
+          x = "Percent of Impervious Surface",
+       y = "Morning Temperature (°F)")
 
 # do a linear regression
 lm(temperature ~ percent_im, data = df) |>
@@ -357,7 +428,7 @@ ggplot() +
   geom_sf(data = epa, fill = "orange", alpha = 0.1) +
   geom_sf(data = menlo_park, fill = "blue", alpha = 0.1) +
 geom_sf(data = impervious_surfaces, aes(fill = Percent_Im), color = NA) +
-  scale_fill_continuous(low="lightblue",high="red")
+  scale_fill_continuous(low="lightblue",high="red") 
 ```
 
 
@@ -437,8 +508,11 @@ df_dists <- df_data |>
 ggplot() +
   geom_sf(data=coastlines) +
   geom_sf(data=df_for_distances, size = .1) +
-  geom_segment(data=df_dists,aes(x=x,y=y,xend=lon,yend=lat), alpha = 0.1)
-ggsave("pretty_star.jpg")
+  geom_segment(data=df_dists,aes(x=x,y=y,xend=lon,yend=lat), alpha = 0.1) +
+  labs(title = "Distance to Coastline",
+       x = "Longitude",
+       y = "Latitude")
+ggsave("pretty_star.jpg") 
 ```
 ```{r}
 # from dplyer
@@ -478,4 +552,170 @@ moe = tstar*se
 point_estimate - moe
 point_estimate + moe
 ```
+
+
 # REPEATING FOR "AF"/AFTERNOON DATA SET
+```{r}
+af = st_read("traverses_chw_palo_alto_california_090424/palo-alto-california_af_trav.shp")
+```
+
+```{r}
+ggplot() +
+geom_sf(data = af, aes(color = t_f)) +
+  scale_color_continuous(low="lightblue",high="red"
+                         ) + 
+  labs(title = "Continuous Traversal Points (Afternoon)",
+          color = "Afternoon Temperature (°F)")
+```
+
+```{r}
+# NOW WE FIND IMPUTED TEMPERATURES FOR AFTERNOON
+af_tmp_data = st_coordinates(af) |>
+  as.data.frame() |>
+  cbind(af)
+```
+
+```{r}
+# Create interpolation, interp fxn associated with akima, X is lat, Y is long, Z is temp
+af_interp_result <- with(af_tmp_data,
+                        interp(x = X, y = Y, z = t_f,
+                              duplicate = "mean")) # handles duplicate pts
+```
+
+```{r}
+# convert this list we js made into a df for ggplot, $ pulls specific column from df
+af_interp_df <- expand.grid(x = af_interp_result$x, y =af_interp_result$y)
+af_interp_df$temperature <- as.vector(af_interp_result$z)
+af_imputed_temperatures = af_interp_df %>%  drop_na()
+```
+
+```{r}
+af_sf_object <- st_as_sf(af_interp_df, coords = c("y", "x"), crs = 4326)
+```
+
+```{r}
+ggplot() +
+  geom_sf(data = palo_alto, fill = "green", alpha = 0.1) +
+ # geom_sf(data = epa, fill = "orange", alpha = 0.1) +
+ # geom_sf(data = menlo_park, fill = "blue", alpha = 0.1) +
+geom_raster(
+    data = af_imputed_temperatures,
+    aes(x = x, y = y, fill=temperature),
+    alpha = 0.8
+) + 
+  scale_fill_continuous(low = "lightblue", high = "red") 
+```
+
+```{r}
+# different data uses different projections of the globe onto a 2-d plane
+# get the coordinate system for af data
+af_crs = st_crs(af)
+# get the coordinate system for impervious surfaces data
+imp_crs = st_crs(impervious_surfaces)
+
+# turn the imputed temperatures back into a simple features collection (with a geometry column)
+af_tmp = st_as_sf(af_imputed_temperatures, coords = c("x", "y"), crs = af_crs) |>
+  # convert the coordinate system to match the projection for impervious surfaces
+  st_transform(imp_crs)
+
+# combine the data!!!!!!
+af_df = st_join(af_tmp, impervious_surfaces, join = st_within) |> clean_names()
+
+# graph the relationship between temperature and percent_im
+af_df |>
+  ggplot() +
+  aes(x = percent_im, y = temperature) +
+  geom_smooth(method = "lm") + # line of best fit
+  geom_point(alpha = 0.5) +
+  labs(title = "Afternoon Temperature vs Percent of Impervious Surface",
+          x = "Percent of Impervious Surface",
+       y = "Afternoon Temperature (°F)")
+
+# do a linear regression
+lm(temperature ~ percent_im, data = af_df) |>
+  # compute the p-value, etc.
+  summary()
+```
+# repeat this shit for pm data!!
+
+```{r}
+pm = st_read("traverses_chw_palo_alto_california_090424/palo-alto-california_pm_trav.shp")
+```
+
+
+```{r}
+ggplot() +
+geom_sf(data = pm, aes(color = t_f)) +
+  scale_color_continuous(low="lightblue",high="red"
+                         ) + 
+  labs(title = "Continuous Traversal Points (Evening)",
+          color = "Evening Temperature (°F)")
+```
+```{r}
+# NOW WE FIND IMPUTED TEMPERATURES FOR AFTERNOON
+pm_tmp_data = st_coordinates(pm) |>
+  as.data.frame() |>
+  cbind(pm)
+```
+
+```{r}
+# Create interpolation, interp fxn associated with akima, X is lat, Y is long, Z is temp
+pm_interp_result <- with(pm_tmp_data,
+                        interp(x = X, y = Y, z = t_f,
+                              duplicate = "mean")) # handles duplicate pts
+```
+
+```{r}
+# convert this list we js made into a df for ggplot, $ pulls specific column from df
+pm_interp_df <- expand.grid(x = pm_interp_result$x, y =pm_interp_result$y)
+pm_interp_df$temperature <- as.vector(pm_interp_result$z)
+pm_imputed_temperatures = pm_interp_df %>%  drop_na()
+```
+
+```{r}
+pm_sf_object <- st_as_sf(pm_interp_df, coords = c("y", "x"), crs = 4326)
+```
+
+```{r}
+ggplot() +
+  geom_sf(data = palo_alto, fill = "green", alpha = 0.1) +
+ # geom_sf(data = epa, fill = "orange", alpha = 0.1) +
+ # geom_sf(data = menlo_park, fill = "blue", alpha = 0.1) +
+geom_raster(
+    data = pm_imputed_temperatures,
+    aes(x = x, y = y, fill=temperature),
+    alpha = 0.8
+) + 
+  scale_fill_continuous(low = "lightblue", high = "red") 
+```
+
+```{r}
+# different data uses different projections of the globe onto a 2-d plane
+# get the coordinate system for af data
+pm_crs = st_crs(pm)
+# get the coordinate system for impervious surfaces data
+imp_crs = st_crs(impervious_surfaces)
+
+# turn the imputed temperatures back into a simple features collection (with a geometry column)
+pm_tmp = st_as_sf(pm_imputed_temperatures, coords = c("x", "y"), crs = pm_crs) |>
+  # convert the coordinate system to match the projection for impervious surfaces
+  st_transform(imp_crs)
+
+# combine the data!!!!!!
+pm_df = st_join(pm_tmp, impervious_surfaces, join = st_within) |> clean_names()
+
+# graph the relationship between temperature and percent_im
+pm_df |>
+  ggplot() +
+  aes(x = percent_im, y = temperature) +
+  geom_smooth(method = "lm") + # line of best fit
+  geom_point(alpha = 0.5) +
+  labs(title = "Evening Temperature vs Percent of Impervious Surface",
+          x = "Percent of Impervious Surface",
+       y = "Evening Temperature (°F)")
+
+# do a linear regression
+lm(temperature ~ percent_im, data = pm_df) |>
+  # compute the p-value, etc.
+  summary()
+```
