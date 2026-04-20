@@ -102,14 +102,6 @@ geom_sf(data = impervious_surfaces, aes(fill = Percent_Im)) +
   scale_fill_continuous(low="lightblue",high="red")
 ```
 
-### Afternoon
-
-Load the Bay Area Head Mapping Project data for the afternoon.
-
-```{r message = FALSE}
-pm = st_read("data/traverses_chw_palo_alto_california_090424/palo-alto-california_pm_trav.shp")
-```
-
 ## Load Map Data
 
 ### Cities
@@ -196,6 +188,8 @@ coastlines = st_read("data/coastlines.gpkg") %>% select()
 
 ### Impute temperatures
 
+#### Morning
+
 Convert temperature data to a dataframe
 
 ```{r}
@@ -231,10 +225,92 @@ Plot imputed temperatures
 ```{r}
 ggplot() +
   geom_sf(data = palo_alto_border, fill = "green", alpha = 0.1) +
-  geom_sf(data = epa_border, fill = "orange", alpha = 0.1) +
-  geom_sf(data = menlo_border, fill = "blue", alpha = 0.1) +
+  # geom_sf(data = epa_border, fill = "orange", alpha = 0.1) +
+  # geom_sf(data = menlo_border, fill = "blue", alpha = 0.1) +
 geom_raster(
     data = imputed_temperatures,
+    aes(x = x, y = y, fill=temperature),
+    alpha = 0.8
+) + 
+  scale_fill_continuous(low = "lightblue", high = "red") 
+```
+
+#### Afternoon
+
+
+```{r}
+# NOW WE FIND IMPUTED TEMPERATURES FOR AFTERNOON
+af_tmp_data = st_coordinates(af) |>
+  as.data.frame() |>
+  cbind(af)
+```
+
+```{r}
+# Create interpolation, interp fxn associated with akima, X is lat, Y is long, Z is temp
+af_interp_result <- with(af_tmp_data,
+                        interp(x = X, y = Y, z = t_f,
+                              duplicate = "mean")) # handles duplicate pts
+```
+
+```{r}
+# convert this list we js made into a df for ggplot, $ pulls specific column from df
+af_interp_df <- expand.grid(x = af_interp_result$x, y =af_interp_result$y)
+af_interp_df$temperature <- as.vector(af_interp_result$z)
+af_imputed_temperatures = af_interp_df %>%  drop_na()
+```
+
+```{r}
+af_sf_object <- st_as_sf(af_interp_df, coords = c("y", "x"), crs = 4326)
+```
+
+```{r}
+ggplot() +
+  geom_sf(data = palo_alto_border, fill = "green", alpha = 0.1) +
+ # geom_sf(data = epa_border, fill = "orange", alpha = 0.1) +
+ # geom_sf(data = menlo_park_border, fill = "blue", alpha = 0.1) +
+geom_raster(
+    data = af_imputed_temperatures,
+    aes(x = x, y = y, fill=temperature),
+    alpha = 0.8
+) + 
+  scale_fill_continuous(low = "lightblue", high = "red") 
+```
+
+#### Evening
+
+
+```{r}
+# NOW WE FIND IMPUTED TEMPERATURES FOR AFTERNOON
+pm_tmp_data = st_coordinates(pm) |>
+  as.data.frame() |>
+  cbind(pm)
+```
+
+```{r}
+# Create interpolation, interp fxn associated with akima, X is lat, Y is long, Z is temp
+pm_interp_result <- with(pm_tmp_data,
+                        interp(x = X, y = Y, z = t_f,
+                              duplicate = "mean")) # handles duplicate pts
+```
+
+```{r}
+# convert this list we js made into a df for ggplot, $ pulls specific column from df
+pm_interp_df <- expand.grid(x = pm_interp_result$x, y =pm_interp_result$y)
+pm_interp_df$temperature <- as.vector(pm_interp_result$z)
+pm_imputed_temperatures = pm_interp_df %>%  drop_na()
+```
+
+```{r}
+pm_sf_object <- st_as_sf(pm_interp_df, coords = c("y", "x"), crs = 4326)
+```
+
+```{r}
+ggplot() +
+  geom_sf(data = palo_alto_border, fill = "green", alpha = 0.1) +
+ # geom_sf(data = epa_border, fill = "orange", alpha = 0.1) +
+ # geom_sf(data = menlo_park_border, fill = "blue", alpha = 0.1) +
+geom_raster(
+    data = pm_imputed_temperatures,
     aes(x = x, y = y, fill=temperature),
     alpha = 0.8
 ) + 
