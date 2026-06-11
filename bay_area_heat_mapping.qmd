@@ -1,5 +1,5 @@
 ---
-title: "Bay Area Heat Mapping"
+title: "Palo Alto Heat Mapping"
 format: html
 editor: visual
 ---
@@ -8,11 +8,41 @@ editor: visual
 
 ## Load R Libraries
 
-For general data wrangling that Dr. EB likes.
+```{r message=FALSE}
+install.packages("broom")
+install.packages("modelr")
+```
 
 ```{r message=FALSE}
+library(broom)
+library(modelr)
+```
+
+```{r}
+install.packages("tidyverse")
+```
+
+```{r message = FALSE}
+install.packages("janitor")
+```
+
+For general data wrangling that Dr. EB likes.
+
+```{r}
 library(tidyverse)
 library(janitor)
+```
+
+```{r message=FALSE}
+library(modelr)
+```
+
+```{r}
+install.packages("sf")
+```
+
+```{r}
+install.packages("osmdata")
 ```
 
 For working with map data
@@ -22,6 +52,10 @@ library(sf)
 library(osmdata)
 ```
 
+```{r}
+install.packages("akima")
+```
+
 For imputing temperatures
 
 ```{r message=FALSE}
@@ -29,6 +63,11 @@ library(akima)
 ```
 
 For calculating distances on the surface of the earth
+
+```{r}
+install.packages("geosphere"
+)
+```
 
 ```{r message = FALSE}
 library(geosphere)
@@ -43,6 +82,22 @@ Load the \[Bay Area Head Mapping Project data\](<https://osf.io/apsx5/files/wdpb
 ```{r}
 am = st_read("data/traverses_chw_palo_alto_california_090424/palo-alto-california_am_trav.shp")
 ```
+```{r}
+# 1. Read the shapefile as an sf object
+am_raw_df <- st_read("data/traverses_chw_palo_alto_california_090424/palo-alto-california_am_trav.shp")
+
+# 2. Convert to a standard data frame by dropping geometry
+am_traversal_df <- st_drop_geometry(am_raw_df)
+```
+```{r}
+#find morning (traversal) average temperature, temperature range
+fivenum(am_traversal_df %>% 
+       pull(t_f))
+mean(am_traversal_df %>% 
+       pull(t_f))
+```
+
+
 
 Plot the raw heat mapping data for morning.
 
@@ -51,14 +106,26 @@ ggplot() +
 geom_sf(data = am, aes(color = t_f)) +
   scale_color_continuous(low="lightblue",high="red"
                          ) + 
-  labs(title = "Continuous Traversal Points (Morning)",
+  labs(title = "Continuous Traversal Points (Morning 6-7 AM)",
           color = "Morning Temperature (°F)")
 ```
-
 ### Afternoon
 
 ```{r}
 af = st_read("data/traverses_chw_palo_alto_california_090424/palo-alto-california_af_trav.shp")
+```
+```{r}
+# 1. Read the shapefile as an sf object
+af_raw_df <- st_read("data/traverses_chw_palo_alto_california_090424/palo-alto-california_af_trav.shp")
+
+# 2. Convert to a standard data frame by dropping geometry
+af_traversal_df <- st_drop_geometry(af_raw_df)
+
+#find morning (traversal) average temperature, temperature range
+fivenum(af_traversal_df %>% 
+       pull(t_f))
+mean(af_traversal_df %>% 
+       pull(t_f))
 ```
 
 ```{r}
@@ -66,7 +133,7 @@ ggplot() +
 geom_sf(data = af, aes(color = t_f)) +
   scale_color_continuous(low="lightblue",high="red"
                          ) + 
-  labs(title = "Continuous Traversal Points (Afternoon)",
+  labs(title = "Continuous Traversal Points (Afternoon 3-4 PM)",
           color = "Afternoon Temperature (°F)")
 ```
 
@@ -75,13 +142,26 @@ geom_sf(data = af, aes(color = t_f)) +
 ```{r}
 pm = st_read("data/traverses_chw_palo_alto_california_090424/palo-alto-california_pm_trav.shp")
 ```
+```{r}
+# 1. Read the shapefile as an sf object
+pm_raw_df <- st_read("data/traverses_chw_palo_alto_california_090424/palo-alto-california_pm_trav.shp")
+
+# 2. Convert to a standard data frame by dropping geometry
+pm_traversal_df <- st_drop_geometry(pm_raw_df)
+
+#find morning (traversal) average temperature, temperature range
+fivenum(pm_traversal_df %>% 
+       pull(t_f))
+mean(pm_traversal_df %>% 
+       pull(t_f))
+```
 
 ```{r}
 ggplot() +
 geom_sf(data = pm, aes(color = t_f)) +
   scale_color_continuous(low="lightblue",high="red"
                          ) + 
-  labs(title = "Continuous Traversal Points (Evening)",
+  labs(title = "Continuous Traversal Points (Evening 7-8 PM)",
           color = "Evening Temperature (°F)")
 ```
 
@@ -95,13 +175,28 @@ Read impervious surfaces data, which Anna Freitas shared with us. She said:
 impervious_surfaces = st_read("data/Palo_Alto_Impervious/Palo_Alto_Impervious_no open space.shp") %>% 
   dplyr::select(Percent_Im)
 ```
+```{r}
+# 1. Read the shapefile as an sf object
+imperv_surf_df <- st_read("data/Palo_Alto_Impervious/Palo_Alto_Impervious_no open space.shp")
+
+# 2. Convert to a standard data frame by dropping geometry
+imperv_surface_df <- st_drop_geometry(imperv_surf_df)
+
+#find morning (traversal) average temperature, temperature range
+fivenum(imperv_surface_df %>% 
+       pull(Percent_Im))
+mean(imperv_surface_df %>% 
+       pull(Percent_Im))
+```
 
 Plot impervious surfaces data
 
 ```{r}
 ggplot() +
 geom_sf(data = impervious_surfaces, aes(fill = Percent_Im)) +
-  scale_fill_continuous(low="lightblue",high="red")
+  scale_fill_continuous(low="lightblue",high="red") +
+  labs(title = "Palo Alto Impervious Surface",
+       fill = "Percent Impervious Surface") 
 ```
 
 ## Load Map Data
@@ -219,6 +314,8 @@ impute_temperatures = function(df, granularity) {
 }
 ```
 
+
+
 ### Morning
 
 ```{r}
@@ -242,7 +339,6 @@ geom_raster(
 
 ### Afternoon
 
-
 ```{r}
 af_imputed_temperatures = impute_temperatures(af, 60)
 ```
@@ -250,8 +346,8 @@ af_imputed_temperatures = impute_temperatures(af, 60)
 ```{r}
 ggplot() +
   geom_sf(data = palo_alto_border, fill = "green", alpha = 0.1) +
- # geom_sf(data = epa_border, fill = "orange", alpha = 0.1) +
- # geom_sf(data = menlo_park_border, fill = "blue", alpha = 0.1) +
+  geom_sf(data = epa_border, fill = "orange", alpha = 0.1) +
+  geom_sf(data = menlo_border, fill = "blue", alpha = 0.1) +
 geom_raster(
     data = af_imputed_temperatures,
     aes(x = x, y = y, fill=temperature),
@@ -292,28 +388,27 @@ Exclude parts of Palo Alto, Menlo Park, and East Palo Alto that are under water.
 
 ```{r}
 palo_alto = st_difference(palo_alto_border, sf_bay)
-menlo_park = st_difference(menlo_border, sf_bay)
-epa = st_difference(epa_border, sf_bay)
+#menlo_park = st_difference(menlo_border, sf_bay)
+#epa = st_difference(epa_border, sf_bay)
 ```
 
 Plot the old city boundaries (land and water).
 
 ```{r}
 ggplot() +
-  geom_sf(data = palo_alto_border, fill = "green", alpha = 0.1) +
-  geom_sf(data = epa_border, fill = "orange", alpha = 0.1) +
-  geom_sf(data = menlo_border, fill = "blue", alpha = 0.1)
+  geom_sf(data = palo_alto_border, fill = "green", alpha = 0.1)
+ # geom_sf(data = epa_border, fill = "orange", alpha = 0.1) +
+  #geom_sf(data = menlo_border, fill = "blue", alpha = 0.1)
 ```
 
 Plot the new city boundaries (only land).
 
 ```{r}
 ggplot() +
-  geom_sf(data = palo_alto, fill = "green", alpha = 0.1) +
-  geom_sf(data = epa, fill = "orange", alpha = 0.1) +
-  geom_sf(data = menlo_park, fill = "blue", alpha = 0.1)
+  geom_sf(data = palo_alto, fill = "green", alpha = 0.1)
+ # geom_sf(data = epa, fill = "orange", alpha = 0.1) +
+  #geom_sf(data = menlo_park, fill = "blue", alpha = 0.1)
 ```
-
 
 ## Combine Impervious Surfaces and Temperature Data
 
@@ -353,17 +448,17 @@ Crop city boundaries to where there's data
 ```{r}
 am_combo_tmp_bbox = am_combo %>% st_bbox()
 am_palo_alto_with_data = st_crop(palo_alto, am_combo_tmp_bbox)
-am_epa_with_data = st_crop(epa, am_combo_tmp_bbox)
-am_menlo_park_with_data = st_crop(menlo_park, am_combo_tmp_bbox)
+#am_epa_with_data = st_crop(epa, am_combo_tmp_bbox)
+#am_menlo_park_with_data = st_crop(menlo_park, am_combo_tmp_bbox)
 ```
 
-Plot imputed temperature and surface data overlap
+Plot imputed temperature and surface data overlap -\> only Palo Alto
 
 ```{r}
 ggplot() +
   geom_sf(data = am_palo_alto_with_data, fill = "green", alpha = 0.1) +
-  geom_sf(data = am_epa_with_data, fill = "orange", alpha = 0.1) +
-  geom_sf(data = am_menlo_park_with_data, fill = "blue", alpha = 0.1) +
+ # geom_sf(data = am_epa_with_data, fill = "orange", alpha = 0.1) +
+ # geom_sf(data = am_menlo_park_with_data, fill = "blue", alpha = 0.1) +
   geom_raster(
     data = am_combo_df,
     aes(x = X, y = Y, fill=temperature),
@@ -373,7 +468,7 @@ ggplot() +
   labs(
     x = NULL,
     y = NULL,
-    title = "Imputed Temperatures (Morning)",
+    title = "Palo Alto Imputed Temperatures (Morning 6-7 AM)",
     fill = "Morning Temperature (°F)")
 ggsave("am_temperatures.png")
 ```
@@ -411,8 +506,8 @@ Crop city boundaries to where there's data
 ```{r}
 af_combo_tmp_bbox = af_combo %>% st_bbox()
 af_palo_alto_with_data = st_crop(palo_alto, af_combo_tmp_bbox)
-af_epa_with_data = st_crop(epa, af_combo_tmp_bbox)
-af_menlo_park_with_data = st_crop(menlo_park, af_combo_tmp_bbox)
+# af_epa_with_data = st_crop(epa, af_combo_tmp_bbox)
+# af_menlo_park_with_data = st_crop(menlo_park, af_combo_tmp_bbox)
 ```
 
 Plot imputed temperature and surface data overlap
@@ -420,8 +515,8 @@ Plot imputed temperature and surface data overlap
 ```{r}
 ggplot() +
   geom_sf(data = af_palo_alto_with_data, fill = "green", alpha = 0.1) +
-  geom_sf(data = af_epa_with_data, fill = "orange", alpha = 0.1) +
-  geom_sf(data = af_menlo_park_with_data, fill = "blue", alpha = 0.1) +
+ # geom_sf(data = af_epa_with_data, fill = "orange", alpha = 0.1) +
+ # geom_sf(data = af_menlo_park_with_data, fill = "blue", alpha = 0.1) +
   geom_raster(
     data = af_combo_df,
     aes(x = X, y = Y, fill=temperature),
@@ -431,7 +526,7 @@ ggplot() +
   labs(
     x = NULL,
     y = NULL,
-    title = "Imputed Temperatures (Afternoon)",
+    title = "Palo Alto Imputed Temperatures (Afternoon 3-4 PM)",
     fill = "Afternoon Temperature (°F)")
 ggsave("af_temperatures.png")
 ```
@@ -469,8 +564,8 @@ Crop city boundaries to where there's data
 ```{r}
 pm_combo_tmp_bbox = pm_combo %>% st_bbox()
 pm_palo_alto_with_data = st_crop(palo_alto, pm_combo_tmp_bbox)
-pm_epa_with_data = st_crop(epa, pm_combo_tmp_bbox)
-pm_menlo_park_with_data = st_crop(menlo_park, pm_combo_tmp_bbox)
+#pm_epa_with_data = st_crop(epa, pm_combo_tmp_bbox)
+#pm_menlo_park_with_data = st_crop(menlo_park, pm_combo_tmp_bbox)
 ```
 
 Plot imputed temperature and surface data overlap
@@ -478,8 +573,8 @@ Plot imputed temperature and surface data overlap
 ```{r}
 ggplot() +
   geom_sf(data = pm_palo_alto_with_data, fill = "green", alpha = 0.1) +
-  geom_sf(data = pm_epa_with_data, fill = "orange", alpha = 0.1) +
-  geom_sf(data = pm_menlo_park_with_data, fill = "blue", alpha = 0.1) +
+  #geom_sf(data = pm_epa_with_data, fill = "orange", alpha = 0.1) +
+  #geom_sf(data = pm_menlo_park_with_data, fill = "blue", alpha = 0.1) +
   geom_raster(
     data = pm_combo_df,
     aes(x = X, y = Y, fill=temperature),
@@ -489,10 +584,11 @@ ggplot() +
   labs(
     x = NULL,
     y = NULL,
-    title = "Imputed Temperatures (Evening)",
+    title = "Imputed Temperatures (Evening 7-8 PM)",
     fill = "Evening Temperature (°F)")
 ggsave("pm_temperatures.png")
 ```
+
 ## Calculate distances to coastline.
 
 ### Morning
@@ -536,7 +632,6 @@ ggplot() +
   geom_segment(data=am_df_dists,aes(x=x,y=y,xend=lon,yend=lat), alpha = 0.1)
 ggsave("pretty_star.jpg")
 ```
-
 
 ### Afternoon
 
@@ -600,8 +695,280 @@ pm_df_data = st_coordinates(pm_combo_for_distances) |>
 pm_df_dists = read_csv("data/pm_df_dists.csv")
 ```
 
-## Linear Regressions
+#Combining The Data
 
+```{r}
+gen_temp = bind_rows(
+  list(
+am_df_dists %>% 
+  mutate(time = "6-7am"),
+af_df_dists  %>% 
+  mutate(time = "3-4pm"),
+pm_df_dists  %>% 
+  mutate(time = "7-8pm")
+)
+) %>% 
+  # mutate(
+  #   time_from_solar_noon = case_when(
+  #     time == "6-7am" ~ -.5,
+  #       time == "3-4pm" ~ 3.5 
+  #   )
+  # )
+  mutate(milessq = miles^2,
+         milescubed = miles^3,
+         milesfourth = miles^4,
+         lnmiles = log(miles))
+```
+
+##Finding coefficients for fitting combined data
+
+###6-7am
+
+```{r}
+gen_temp %>% 
+  filter(time == "6-7am") %>% 
+  lm(temperature ~ x + x^2, data = .) %>% 
+  summary()
+```
+
+###6-7 am fitted graph - quadratic
+
+```{r}
+# c = 5.689*10^1
+# b = 1.118*10^(-3)
+# a  = -2.900*10^(-7)
+# df_augmented = gen_temp %>% 
+#   filter(time == "6-7am") %>% 
+#   mutate(prediction = a*x^2 + b*x + c,
+#          resid = temperature - prediction)
+# df_augmented %>% 
+#   ggplot() +
+#   aes(x = distance, y = temperature, colour = time) +
+#   geom_point() +
+#  geom_function(fun = function(x) {a*x^2 + b*x + c},
+#                color = "red", lwd = 2) +
+#   # geom_smooth(method = "loess") +
+#   
+#   facet_wrap(vars(time),scales = "free")
+```
+
+```{r}
+#finding average temperature for 6-7 am
+mean(gen_temp %>% 
+  filter(time == "6-7am") %>% pull(temperature))
+```
+
+```{r}
+#finding average percent imp
+mean(gen_temp %>% 
+  filter(time == "6-7am") %>% 
+     pull(percent_im))
+```
+
+###6-7 am fitted graph - log
+
+```{r}
+a = 1.02383-1.07168
+b = 91 + 1.27703 -35.00931
+df_augmented = gen_temp %>% 
+  filter(time == "6-7am") %>% 
+  mutate(prediction = a*log(x)+b,
+         resid = temperature - prediction)
+df_augmented %>% 
+  ggplot() +
+  aes(x = miles, y = temperature, colour = time) +
+  geom_point() +
+ geom_function(fun = function(x) {a*log(x)+b},
+               color = "red", lwd = 2) +
+  # geom_smooth(method = "loess") +
+  
+  facet_wrap(vars(time),scales = "free")
+```
+###6-7 am fitted graph - square root (maybe unnecessary)
+```{r}
+a = 1.02383-1.07168
+b = 91 + 1.27703 -35.00931
+df_augmented = gen_temp %>% 
+  filter(time == "6-7am") %>% 
+  mutate(prediction = a*sqrt(x)+b,
+         resid = temperature - prediction)
+df_augmented %>% 
+  ggplot() +
+  aes(x = miles, y = temperature, colour = time) +
+  geom_point() +
+ geom_function(fun = function(x) {a*sqrt(x)+b},
+               color = "red", lwd = 2) +
+  # geom_smooth(method = "loess") +
+  
+  facet_wrap(vars(time),scales = "free")
+```
+
+###3-4 pm - loess
+
+```{r}
+c = 8.955e+01
+b = 2.466e-03
+a  = -3.656e-07
+gen_temp %>% 
+   filter(time == "3-4pm") %>% 
+  ggplot() +
+  aes(x = distance, y = temperature, colour = time) +
+geom_point() +
+  geom_smooth(method = "loess") +
+  
+  facet_wrap(vars(time),scales = "free")
+```
+
+###3-4 pm fitted graph - poly
+
+```{r}
+c = 8.955e+01
+b = 2.466e-03
+a  = -3.656e-07
+gen_temp %>% 
+   filter(time == "3-4pm") %>% 
+  ggplot() +
+  aes(x = distance, y = temperature, colour = time) +
+geom_point() +
+  geom_function(fun = function(x) {a*x^2 + b*x + c}) +
+  # geom_smooth(method = "loess") +
+  
+  facet_wrap(vars(time),scales = "free")
+```
+
+###3-4 pm fitted graph - loess
+
+```{r}
+c = 8.955e+01
+b = 2.466e-03
+a  = -3.656e-07
+gen_temp %>% 
+   filter(time == "3-4pm") %>% 
+  ggplot() +
+  aes(x = distance, y = temperature, colour = time) +
+geom_point() +
+ # geom_function(fun = function(x) {a*x^2 + b*x + c}) +
+   geom_smooth(method = "loess") +
+  
+  facet_wrap(vars(time),scales = "free")
+```
+
+###3-4 pm fitted graph - log
+
+```{r}
+a = 1.02383 
+b = 91.83215 + 0.5597818*1.27703 
+df_augmented = gen_temp %>% 
+  filter(time == "3-4pm") %>% 
+  mutate(prediction = a*log(miles)+b,
+         resid = temperature - prediction)
+df_augmented %>% 
+  ggplot() +
+  aes(x = miles, y = temperature, colour = time) +
+  geom_point() +
+ geom_function(fun = function(x) {a*log(x)+b},
+               color = "red", lwd = 2) +
+  # geom_smooth(method = "loess") +
+  
+  facet_wrap(vars(time),scales = "free")
+```
+
+###7-8 pm
+
+```{r}
+gen_temp %>% 
+  filter(time == "7-8pm") %>% 
+  lm(temperature ~ x + x^2, data = .) %>% 
+  summary()
+```
+
+###7-8 pm fitted graph - poly
+
+```{r}
+c = 7.720e+01
+b = 4.806e-03
+a  = -6.596e-07
+gen_temp %>% 
+   filter(time == "7-8pm") %>% 
+  ggplot() +
+  aes(x = distance, y = temperature, colour = time) +
+geom_point() +
+  geom_function(fun = function(x) {a*x^2 + b*x + c}) +
+  # geom_smooth(method = "loess") +
+  
+  facet_wrap(vars(time),scales = "free")
+```
+
+###7-8 pm fitted graph - loess
+
+```{r}
+c = 7.720e+01
+b = 4.806e-03
+a  = -6.596e-07
+gen_temp %>% 
+   filter(time == "7-8pm") %>% 
+  ggplot() +
+  aes(x = distance, y = temperature, colour = time) +
+geom_point() +
+ # geom_function(fun = function(x) {a*x^2 + b*x + c}) +
+   geom_smooth(method = "loess") +
+  
+  facet_wrap(vars(time),scales = "free")
+```
+
+###7-8 pm fitted graph - log
+
+```{r}
+#why is my y-axis off?
+a = 1.02383 + 1.10388
+b = 91 + 0.5597818*1.27703 - 9.23545 
+df_augmented = gen_temp %>% 
+  filter(time == "7-8pm") %>% 
+  mutate(prediction = a*log(x)+b,
+         resid = temperature - prediction)
+df_augmented %>% 
+  ggplot() +
+  aes(x = miles, y = temperature, colour = time) +
+  geom_point() +
+ geom_function(fun = function(x) {a*log(x)+b},
+               color = "red", lwd = 2) +
+  # geom_smooth(method = "loess") +
+  
+  facet_wrap(vars(time),scales = "free")
+```
+
+##Finding Residuals of Fitted Graphs Using Impervious Surface Data ###6-7am residuals
+
+```{r}
+# Plot residuals against impervious surface ('impervious_surfaces') to check for patterns - it has a prob w/ .resid (i think i need to name it tbh), okay so i named it -> has a problem with length: slight issue since impervious surface data is by land usage not the same places as .resid (can i bypass this somehow?); can't seem to bypass :(
+ggplot(df_augmented, aes(x = percent_im, y = resid)) +
+  geom_point() +
+  geom_smooth(method = "loess", color = "red") + # Smoother to highlight trend
+  geom_hline(yintercept = 0, linetype = "dashed") +
+  labs(title = "Residuals vs Impervious Surfaces",
+       x = "Impervous Surfaces (%)",
+       y = "Residuals")
+```
+
+```{r}
+lm(temperature ~ distance * percent_im * time, data = gen_temp) %>% 
+  summary()
+```
+
+```{r}
+gen_temp %>% 
+  ggplot() +
+  aes(x = percent_im, y = temperature, colour = time) +
+geom_point() +
+  geom_smooth(method = "lm") +
+  facet_wrap(vars(time),scales = "free") +
+  labs(x = "Impervious Surface Percentage",
+       y = "Air Temperature (°F)",
+       title = "Air Temperature (°F) vs. Impervious Surface Percentage")
+```
+
+## Linear Regressions - shouldn't be linear (acknowledge this in paper/poster)
+-> figure out why it isn't linear
 ### Morning Temperature \~ Impervious Surface
 
 ```{r}
@@ -609,8 +976,12 @@ pm_df_dists = read_csv("data/pm_df_dists.csv")
 am_combo_df |>
   ggplot() +
   aes(x = percent_im, y = temperature) +
-  geom_smooth(method = "lm") + # line of best fit
-  geom_point() # scatterplot
+  geom_smooth(method = "lm",
+              color = "black") + 
+  geom_point(color = "red") +
+  labs(x = "Percent Impervious Surface",
+       y = "Morning Air Temperature (°F)",
+       title = "Morning Air Temperature (°F) vs. Percent Impervious Surface")
 
 # do a linear regression
 am_lm_results = lm(temperature ~ percent_im, data = am_combo_df) |>
@@ -636,10 +1007,14 @@ point_estimate + moe
 ```{r}
 # graph the relationship between temperature and percent_im
 af_combo_df |>
-  ggplot() +
+    ggplot() +
   aes(x = percent_im, y = temperature) +
-  geom_smooth(method = "lm") + # line of best fit
-  geom_point() # scatterplot
+  geom_smooth(method = "lm",
+              color = "black") + 
+  geom_point(color = "red") +
+  labs(x = "Percent Impervious Surface",
+       y = "Afternoon Air Temperature (°F)",
+       title = "Afternoon Air Temperature (°F) vs. Percent Impervious Surface")
 
 # do a linear regression
 af_lm_results = lm(temperature ~ percent_im, data = af_combo_df) |>
@@ -667,8 +1042,12 @@ point_estimate + moe
 pm_combo_df |>
   ggplot() +
   aes(x = percent_im, y = temperature) +
-  geom_smooth(method = "lm") + # line of best fit
-  geom_point() # scatterplot
+  geom_smooth(method = "lm",
+              color = "black") + 
+  geom_point(color = "red") +
+  labs(x = "Percent Impervious Surface",
+       y = "Evening Air Temperature (°F)",
+       title = "Evening Air Temperature (°F) vs. Percent Impervious Surface")
 
 # do a linear regression
 pm_lm_results = lm(temperature ~ percent_im, data = pm_combo_df) |>
@@ -689,39 +1068,447 @@ point_estimate - moe
 point_estimate + moe
 ```
 
+### Temperature \~ Impervious Surface + Distance to Coastline(quadratic) + Time
+
+```{r}
+#mid day (3-4 pm) is baseline; everything compared it; (Intercept) is avg temp @ 3-4 pm
+#this is a bad graph - don't include
+gen_temp |>
+  ggplot() +
+  aes(x = miles, y = temperature) +
+  geom_smooth(method = "lm") + # line of best fit
+  geom_point() +
+  labs(title = "Bad Graph")
+
+#lm for linear model
+
+# do a linear regression
+m = lm(temperature ~ percent_im + miles + milessq + time, data = gen_temp) 
+m |>
+  # compute the p-value, etc.
+  summary()
+
+df_augmented =
+  gen_temp %>% 
+  mutate(
+    predicted = predict(m),
+    residual=resid(m)
+  )
+```
+
+```{r}
+# Plot residuals against impervious surface ('impervious_surfaces') to check for patterns - it has a prob w/ .resid (i think i need to name it tbh), okay so i named it -> has a problem with length: slight issue since impervious surface data is by land usage not the same places as .resid (can i bypass this somehow?); can't seem to bypass :(
+ggplot(df_augmented %>% filter(time == "6-7am"), aes(x = predicted, y = residual)) +
+  geom_point() +
+  geom_smooth(method = "loess", color = "red") + # Smoother to highlight trend
+  geom_hline(yintercept = 0, linetype = "dashed") +
+  labs(title = "6-7 am Residuals vs Impervious Surfaces",
+       x = "Impervous Surfaces (%)",
+       y = "Residuals")
+```
+
+### Temperature \~ Impervious Surface + Distance to Coastline(log) + Time
+
+######IMPORTANT NUMBERS + SHIT
+
+```{r}
+#mid day (3-4 pm) is baseline; everything compared it; (Intercept) is avg temp @ 3-4 pm
+gen_temp |>
+  ggplot() +
+  aes(x = miles, y = temperature) +
+  geom_smooth(method = "lm") + # line of best fit
+  geom_point() # scatterplot
+
+#lm for linear model
+
+# do a linear regression
+m = lm(temperature ~ percent_im + lnmiles * time, data = gen_temp) 
+m |>
+  # compute the p-value, etc.
+  summary()
+
+df_augmented =
+  gen_temp %>% 
+  mutate(
+    predicted = predict(m),
+    residual=resid(m)
+  )
+```
+
+```{r}
+# Plot residuals against impervious surface ('impervious_surfaces') to check for patterns - it has a prob w/ .resid (i think i need to name it tbh), okay so i named it -> has a problem with length: slight issue since impervious surface data is by land usage not the same places as .resid (can i bypass this somehow?); can't seem to bypass :(
+ggplot(df_augmented %>% filter(time == "6-7am"), aes(x = predicted, y = residual)) +
+  geom_point() +
+  geom_smooth(method = "loess", color = "red") + # Smoother to highlight trend
+  geom_hline(yintercept = 0, linetype = "dashed") +
+  labs(title = "6-7 am Residuals vs Impervious Surfaces",
+       x = "Impervous Surfaces (%)",
+       y = "Residuals")
+```
+```{r}
+m = lm(
+  temperature ~ 
+    percent_im +
+    time +
+    time:miles +
+    time:milessq,
+  data = gen_temp
+)
+m %>% summary()
+
+coef = (m %>% summary())$coefficient[, "Estimate"]
+
+str_c("temperature = ", str_c(names(coef), " * ", coef, collapse = " + "))
+
+coef
+```
+
+Calculate margin of error for Percent Impervious slope:
+
+
+```{r}
+# margin of error for slopes!!! doesn't include 0 SOOO WE ARE STATISTICALLY SIGNIFICANT --> commenting out b/c it's bugging out on me
+# point_estimate = m$coefficients["percent_im", "Estimate"]
+# se = m$coefficients["percent_im", "Std. Error"]
+# tstar = qt(p = 0.975, df = m$df[2])
+# moe = tstar*se
+# point_estimate - moe
+# point_estimate + moe
+```
+
+
+
+Calculate margin of error for miles from coastline slope:
+
+Manually calculating the margin of error:
+point_estimate for slope of miles vs estimated temperature = 
+
+```{r}
+# # margin of error for slopes!!! doesn't include 0 SOOO WE ARE STATISTICALLY SIGNIFICANT --> commenting out b/c it throws a bug
+# #ok fuck it, we're manually calculating the margin of error
+# #
+# point_estimate = m$coef["miles", "(Estimate)"]
+# se = m$coefficients["miles", "Std. Error"]
+# tstar = qt(p = 0.975, df = m$df[2])
+# moe = tstar*se
+# point_estimate - moe
+# point_estimate + moe
+```
+
+```{r}
+point_estimate = coef(m)
+```
+
 
 ### Morning Temperature \~ Impervious Surface + Distance to Coastline
 
 ```{r}
+af_df_dists |>
+  ggplot() +
+  aes(x = miles, y = temperature) +
+  geom_smooth(method = "lm") + # line of best fit
+  geom_point() # scatterplot
+
 #lm for linear model
 
 # do a linear regression
-m = lm(temperature ~ percent_im + miles, data = df_dists) |>
+m = lm(temperature ~ percent_im + miles, data = am_df_dists) |>
   # compute the p-value, etc.
   summary()
 m
 ```
 
-Calculate margin of error for Percent Impervious slope:
+### Afternoon Temperature \~ Impervious Surface + Distance to Coastline
 
 ```{r}
-# margin of error for slopes!!! doesn't include 0 SOOO WE ARE STATISTICALLY SIGNIFICANT
-point_estimate = m$coefficients["percent_im", "Estimate"]
-se = m$coefficients["percent_im", "Std. Error"]
-tstar = qt(p = 0.975, df = m$df[2])
-moe = tstar*se
-point_estimate - moe
-point_estimate + moe
+af_df_dists |>
+  ggplot() +
+  aes(x = miles, y = temperature) +
+  geom_smooth(method = "lm") + # line of best fit
+  geom_point() # scatterplot
+
+#lm for linear model
+
+# do a linear regression
+m = lm(temperature ~ percent_im + miles, data = af_df_dists) |>
+  # compute the p-value, etc.
+  summary()
+m
 ```
 
-Calculate margin of error for miles from coastline slope:
+### Evening Temperature \~ Impervious Surface + Distance to Coastline
 
 ```{r}
-# margin of error for slopes!!! doesn't include 0 SOOO WE ARE STATISTICALLY SIGNIFICANT
-point_estimate = m$coefficients["miles", "Estimate"]
-se = m$coefficients["miles", "Std. Error"]
-tstar = qt(p = 0.975, df = m$df[2])
-moe = tstar*se
-point_estimate - moe
-point_estimate + moe
+pm_df_dists |>
+  ggplot() +
+  aes(x = miles, y = temperature) +
+  geom_smooth(method = "lm") + # line of best fit
+  geom_point() # scatterplot
+
+#lm for linear model
+
+# do a linear regression
+m = lm(temperature ~ percent_im + miles, data = pm_df_dists) |>
+  # compute the p-value, etc.
+  summary()
+m
+```
+# Polynomial Model (using impervious surface in LOBF) - modeling air temperature versus distance to coastline 
+
+```{r}
+#wait a fucking minute... we include percent_im in this model so like this isn't just a clean parabolic relationship 
+m = lm(
+  temperature ~ 
+    percent_im +
+    time +
+    time:miles +
+    time:milessq,
+  data = gen_temp
+)
+m %>% summary()
+
+coef = (m %>% summary())$coefficient[, "Estimate"]
+
+str_c("temperature = ", str_c(names(coef), " * ", coef, collapse = " + "))
+
+coef
+```
+
+
+```{r}
+#finding x and y for vertex -> aka for however many miles we move from the coastline, we go up y amount of degrees from intercept 
+
+#am
+am_vertex_x = -coef[["time6-7am:miles"]] / (2*coef[["time6-7am:milessq"]])
+am_vertex_x
+
+am_vertex_y = - (coef[["time6-7am:miles"]])^2 / (4*coef[["time6-7am:milessq"]])
+am_vertex_y
+
+am_average_at_coast = coef[["(Intercept)"]] + coef[["time6-7am"]]
+
+#af
+af_vertex_x = -coef[["time3-4pm:miles"]] / (2*coef[["time3-4pm:milessq"]])
+af_vertex_x
+
+af_vertex_y = - (coef[["time3-4pm:miles"]])^2 / (4*coef[["time3-4pm:milessq"]])
+af_vertex_y
+
+af_average_at_coast = coef[["(Intercept)"]]
+
+#pm
+pm_vertex_x = -coef[["time7-8pm:miles"]] / (2*coef[["time7-8pm:milessq"]])
+pm_vertex_x
+
+af_vertex_y = - (coef[["time7-8pm:miles"]])^2 / (4*coef[["time7-8pm:milessq"]])
+af_vertex_y
+
+af_average_at_coast = coef[["(Intercept)"]] + coef[["time7-8pm"]]
+```
+
+```{r}
+gen_temp %>% 
+  mutate(prediction = predict(m),
+         residual = resid(m)) %>% 
+  group_by(time) %>% 
+  mutate(
+    a = case_when(
+      time == "6-7am" ~ coef[["time6-7am:milessq"]],
+      time == "3-4pm" ~ coef[["time3-4pm:milessq"]],
+      time == "7-8pm" ~ coef[["time7-8pm:milessq"]]
+    ),
+    b = case_when(
+      time == "6-7am" ~ coef[["time6-7am:miles"]],
+      time == "3-4pm" ~ coef[["time3-4pm:miles"]],
+      time == "7-8pm" ~ coef[["time7-8pm:miles"]]
+    ),
+    c = case_when(
+      time == "6-7am" ~ coef[["(Intercept)"]] + coef[["time6-7am"]],
+      time == "3-4pm" ~ coef[["(Intercept)"]],
+      time == "7-8pm" ~ coef[["(Intercept)"]] + coef[["time7-8pm"]]
+    ),
+    prediction_for_0_percent_im = a*milessq + b*miles + c
+  ) %>% 
+  ggplot(aes(x = miles, y = temperature)) +
+  geom_point(colour = "red") +
+  geom_line(aes(y = prediction_for_0_percent_im), colour = "black") +
+  facet_wrap(vars(time), scale = "free")
+```
+
+```{r}
+gen_temp %>% 
+  mutate(prediction = predict(m),
+         residual = resid(m)) %>% 
+  group_by(time) %>% 
+  mutate(
+    a = case_when(
+      time == "6-7am" ~ coef[["time6-7am:milessq"]],
+      time == "3-4pm" ~ coef[["time3-4pm:milessq"]],
+      time == "7-8pm" ~ coef[["time7-8pm:milessq"]]
+    ),
+    b = case_when(
+      time == "6-7am" ~ coef[["time6-7am:miles"]],
+      time == "3-4pm" ~ coef[["time3-4pm:miles"]],
+      time == "7-8pm" ~ coef[["time7-8pm:miles"]]
+    ),
+    c = case_when(
+      time == "6-7am" ~ coef[["(Intercept)"]] + coef[["time6-7am"]],
+      time == "3-4pm" ~ coef[["(Intercept)"]],
+      time == "7-8pm" ~ coef[["(Intercept)"]] + coef[["time7-8pm"]]
+    ),
+    prediction_for_avg_percent_im = a*milessq + b*miles + c + coef[["percent_im"]]*mean(gen_temp %>% 
+  filter(time == "6-7am") %>% 
+     pull(percent_im))
+  ) %>% 
+  ggplot(aes(x = miles, y = temperature)) +
+  geom_point(colour = "red") +
+  geom_line(aes(y = prediction_for_avg_percent_im), colour = "black") +
+  labs(x = "Distance to Coastline (miles)",
+       y =  "Air Temperature (°F)",
+       title = "Air Temperature (°F) vs. Distance to Coastline (miles)") +
+  facet_wrap(vars(time), scale = "free")
+```
+
+```{r}
+gen_temp %>% 
+  mutate(prediction = predict(m),
+         residual = resid(m)) %>% 
+  group_by(time) %>% 
+  mutate(
+    a = case_when(
+      time == "6-7am" ~ coef[["time6-7am:milessq"]],
+      time == "3-4pm" ~ coef[["time3-4pm:milessq"]],
+      time == "7-8pm" ~ coef[["time7-8pm:milessq"]]
+    ),
+    b = case_when(
+      time == "6-7am" ~ coef[["time6-7am:miles"]],
+      time == "3-4pm" ~ coef[["time3-4pm:miles"]],
+      time == "7-8pm" ~ coef[["time7-8pm:miles"]]
+    ),
+    c = case_when(
+      time == "6-7am" ~ coef[["(Intercept)"]] + coef[["time6-7am"]],
+      time == "3-4pm" ~ coef[["(Intercept)"]],
+      time == "7-8pm" ~ coef[["(Intercept)"]] + coef[["time7-8pm"]]
+    ),
+    prediction_for_0_percent_im = a*milessq + b*miles + c
+  ) %>% 
+filter(time == "6-7am") %>% 
+  ggplot(aes(x = miles, y = temperature))  +
+  geom_point(colour = "red") +
+  geom_line(aes(y = prediction_for_0_percent_im), colour = "black") +
+  coord_fixed(1/2)
+```
+
+```{r}
+gen_temp %>% 
+  mutate(prediction = predict(m),
+         residual = resid(m)) %>% 
+  group_by(time) %>% 
+  mutate(
+    a = case_when(
+      time == "6-7am" ~ coef[["time6-7am:milessq"]],
+      time == "3-4pm" ~ coef[["time3-4pm:milessq"]],
+      time == "7-8pm" ~ coef[["time7-8pm:milessq"]]
+    ),
+    b = case_when(
+      time == "6-7am" ~ coef[["time6-7am:miles"]],
+      time == "3-4pm" ~ coef[["time3-4pm:miles"]],
+      time == "7-8pm" ~ coef[["time7-8pm:miles"]]
+    ),
+    c = case_when(
+      time == "6-7am" ~ coef[["(Intercept)"]] + coef[["time6-7am"]],
+      time == "3-4pm" ~ coef[["(Intercept)"]],
+      time == "7-8pm" ~ coef[["(Intercept)"]] + coef[["time7-8pm"]]
+    ),
+    prediction_for_0_percent_im = a*milessq + b*miles + c
+  ) %>% 
+filter(time == "3-4pm") %>% 
+  ggplot(aes(x = miles, y = temperature))  +
+  geom_point(colour = "red") +
+  geom_line(aes(y = prediction_for_0_percent_im), colour = "black") +
+  #facet_wrap(vars(time), scale = "free") +
+  coord_fixed(1/2)
+```
+
+```{r}
+gen_temp %>% 
+  mutate(prediction = predict(m),
+         residual = resid(m)) %>% 
+  group_by(time) %>% 
+  mutate(
+    a = case_when(
+      time == "6-7am" ~ coef[["time6-7am:milessq"]],
+      time == "3-4pm" ~ coef[["time3-4pm:milessq"]],
+      time == "7-8pm" ~ coef[["time7-8pm:milessq"]]
+    ),
+    b = case_when(
+      time == "6-7am" ~ coef[["time6-7am:miles"]],
+      time == "3-4pm" ~ coef[["time3-4pm:miles"]],
+      time == "7-8pm" ~ coef[["time7-8pm:miles"]]
+    ),
+    c = case_when(
+      time == "6-7am" ~ coef[["(Intercept)"]] + coef[["time6-7am"]],
+      time == "3-4pm" ~ coef[["(Intercept)"]],
+      time == "7-8pm" ~ coef[["(Intercept)"]] + coef[["time7-8pm"]]
+    ),
+    prediction_for_0_percent_im = a*milessq + b*miles + c
+  ) %>% 
+filter(time == "7-8pm") %>% 
+  ggplot(aes(x = miles, y = temperature))  +
+  geom_point(colour = "red") +
+  geom_line(aes(y = prediction_for_0_percent_im), colour = "black") +
+ # facet_wrap(vars(time), scale = "free") +
+  coord_fixed(1/2)
+```
+
+# Polynomial Model (NOT using impervious surface in LOBF) - modeling air temperature versus distance to coastline 
+
+```{r}
+#wait a fucking minute... we include percent_im in this model so like this isn't just a clean parabolic relationship 
+f = lm(
+  temperature ~
+    time +
+    time:miles +
+    time:milessq,
+  data = gen_temp
+)
+f %>% summary()
+
+coef = (f %>% summary())$coefficient[, "Estimate"]
+
+str_c("temperature = ", str_c(names(coef), " * ", coef, collapse = " + "))
+
+coef
+```
+
+
+```{r}
+gen_temp %>% 
+  mutate(prediction = predict(f),
+         residual = resid(f)) %>% 
+  group_by(time) %>% 
+  mutate(
+    a = case_when(
+      time == "6-7am" ~ coef[["time6-7am:milessq"]],
+      time == "3-4pm" ~ coef[["time3-4pm:milessq"]],
+      time == "7-8pm" ~ coef[["time7-8pm:milessq"]]
+    ),
+    b = case_when(
+      time == "6-7am" ~ coef[["time6-7am:miles"]],
+      time == "3-4pm" ~ coef[["time3-4pm:miles"]],
+      time == "7-8pm" ~ coef[["time7-8pm:miles"]]
+    ),
+    c = case_when(
+      time == "6-7am" ~ coef[["(Intercept)"]] + coef[["time6-7am"]],
+      time == "3-4pm" ~ coef[["(Intercept)"]],
+      time == "7-8pm" ~ coef[["(Intercept)"]] + coef[["time7-8pm"]]
+    ),
+    prediction_for_avg_percent_im = a*milessq + b*miles + c) %>% 
+  ggplot(aes(x = miles, y = temperature)) +
+  geom_point(colour = "red") +
+  geom_line(aes(y = prediction_for_avg_percent_im), colour = "black") +
+  labs(x = "Distance to Coastline (miles)",
+       y =  "Air Temperature (°F)",
+       title = "Air Temperature (°F) vs. Distance to Coastline (miles)") +
+  facet_wrap(vars(time), scale = "free")
 ```
