@@ -12,6 +12,22 @@ editor: visual
 install.packages("broom")
 install.packages("modelr")
 ```
+```{r}
+install.packages("modelsummary")
+library(modelsummary)
+```
+```{r}
+install.packages("webshot2")
+library(webshot2)
+```
+
+```{r}
+install.packages("tinytable")
+library(tinytable)
+```
+
+
+
 
 ```{r message=FALSE}
 library(broom)
@@ -629,7 +645,10 @@ great - now we find distance to coastline and express that via lines (actual dis
 ggplot() +
   geom_sf(data=coastlines) +
   geom_sf(data=am_combo_for_distances, size = .1) +
-  geom_segment(data=am_df_dists,aes(x=x,y=y,xend=lon,yend=lat), alpha = 0.1)
+  geom_segment(data=am_df_dists,aes(x=x,y=y,xend=lon,yend=lat), alpha = 0.1) +
+  labs(title = "Distance to Coastline in Palo Alto",
+       x = "",
+       y = "")
 ggsave("pretty_star.jpg")
 ```
 
@@ -951,9 +970,15 @@ ggplot(df_augmented, aes(x = percent_im, y = resid)) +
 ```
 
 ```{r}
-lm(temperature ~ distance * percent_im * time, data = gen_temp) %>% 
+air_temp_versus_impervious_surface = lm(temperature ~ distance * percent_im * time, data = gen_temp) %>% 
   summary()
 ```
+
+```{r}
+modelsummary(air_temp_versus_impervious_surface)
+#modelsummary(air_temp_versus_impervious_surface, output = "latex")
+```
+
 
 ```{r}
 gen_temp %>% 
@@ -964,7 +989,8 @@ geom_point() +
   facet_wrap(vars(time),scales = "free") +
   labs(x = "Impervious Surface Percentage",
        y = "Air Temperature (°F)",
-       title = "Air Temperature (°F) vs. Impervious Surface Percentage")
+       title = "Air Temperature (°F) vs. Impervious Surface Percentage",
+       color = "Time of Day")
 ```
 
 ## Linear Regressions - shouldn't be linear (acknowledge this in paper/poster)
@@ -974,7 +1000,7 @@ geom_point() +
 ```{r}
 # graph the relationship between temperature and percent_im
 am_combo_df |>
-  ggplot() +
+    ggplot() +
   aes(x = percent_im, y = temperature) +
   geom_smooth(method = "lm",
               color = "black") + 
@@ -988,6 +1014,8 @@ am_lm_results = lm(temperature ~ percent_im, data = am_combo_df) |>
   # compute the p-value, etc.
   summary()
 am_lm_results
+
+modelsummary(am_lm_results)
 ```
 
 Calculate margin of error for slopes (automatically read from the model summary `m`!)
@@ -1021,6 +1049,8 @@ af_lm_results = lm(temperature ~ percent_im, data = af_combo_df) |>
   # compute the p-value, etc.
   summary()
 af_lm_results
+
+modelsummary(af_lm_results)
 ```
 
 Calculate margin of error for slopes (automatically read from the model summary `m`!)
@@ -1068,6 +1098,7 @@ point_estimate - moe
 point_estimate + moe
 ```
 
+
 ### Temperature \~ Impervious Surface + Distance to Coastline(quadratic) + Time
 
 ```{r}
@@ -1109,7 +1140,7 @@ ggplot(df_augmented %>% filter(time == "6-7am"), aes(x = predicted, y = residual
 
 ### Temperature \~ Impervious Surface + Distance to Coastline(log) + Time
 
-######IMPORTANT NUMBERS + SHIT
+adde######IMPORTANT NUMBERS + SHIT
 
 ```{r}
 #mid day (3-4 pm) is baseline; everything compared it; (Intercept) is avg temp @ 3-4 pm
